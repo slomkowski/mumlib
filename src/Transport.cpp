@@ -1,6 +1,6 @@
 #include "mumlib/Transport.hpp"
 
-#include "mumble.pb.h"
+#include "Mumble.pb.h"
 
 #include <boost/format.hpp>
 
@@ -8,7 +8,7 @@ using namespace std;
 
 static boost::posix_time::seconds PING_INTERVAL(5);
 
-const long CLIENT_VERSION = 0x010203;
+const long CLIENT_VERSION = 0x01020A;
 const string CLIENT_RELEASE("Mumlib");
 const string CLIENT_OS("OS Unknown");
 const string CLIENT_OS_VERSION("1");

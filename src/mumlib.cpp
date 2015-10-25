@@ -10,7 +10,7 @@
 #include <boost/bind.hpp>
 #include <log4cpp/Category.hh>
 
-#include <mumble.pb.h>
+#include <Mumble.pb.h>
 
 using namespace std;
 using namespace boost::asio;

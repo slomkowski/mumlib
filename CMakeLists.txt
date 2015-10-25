@@ -24,8 +24,6 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${LOG4CPP_INCLUDE_DIRS})
 include_directories(include)
 
-file(GLOB ProtoFiles "mumble.proto")
-
 set(MUMLIB_PUBLIC_HEADERS include/mumlib.hpp include/mumlib/VarInt.hpp)
 
 set(MUMLIB_PRIVATE_HEADERS
@@ -45,7 +43,7 @@ set(MUMLIB_SRC
         src/Audio.cpp
 )
 
-PROTOBUF_GENERATE_CPP(PROTO_SRCS PROTO_HDRS mumble.proto)
+PROTOBUF_GENERATE_CPP(PROTO_SRCS PROTO_HDRS Mumble.proto)
 
 add_library(mumlib SHARED ${MUMLIB_SRC} ${MUMLIB_PUBLIC_HEADERS} ${MUMLIB_PRIVATE_HEADERS} ${PROTO_SRCS} ${PROTO_HDRS})
 target_link_libraries(mumlib ${PROTOBUF_LIBRARIES})
