@@ -19,23 +19,56 @@ using namespace mumlib;
 
 namespace mumlib {
     struct _Mumlib_Private : boost::noncopyable {
+        log4cpp::Category &logger = log4cpp::Category::getInstance("mumlib.Mumlib");
+
         bool externalIoService;
-        io_service *ioService;
+        io_service &ioService;
 
-        Callback *callback;
+        Callback &callback;
 
-        Transport *transport;
+        Transport transport;
 
-        Audio *audio;
+        Audio audio;
 
-        log4cpp::Category *logger;
+
+        _Mumlib_Private(Callback &callback)
+                : _Mumlib_Private(callback, *(new io_service())) {
+            externalIoService = false;
+        }
+
+        _Mumlib_Private(Callback &callback, io_service &ioService)
+                : callback(callback),
+                  ioService(ioService),
+                  externalIoService(true),
+                  transport(ioService, boost::bind(&_Mumlib_Private::processIncomingTcpMessage, this, _1, _2, _3),
+                            boost::bind(&_Mumlib_Private::processAudioPacket, this, _1, _2, _3)) { }
+
+        ~_Mumlib_Private() {
+            if (not externalIoService) {
+                delete &ioService;
+            }
+        }
+
+        bool processAudioPacket(AudioPacketType type, uint8_t *buffer, int length) {
+            logger.info("Got %d B of encoded audio data.", length);
+            try {
+                int16_t pcmData[5000];
+                int pcmDataLength = audio.decodeAudioPacket(type, buffer, length, pcmData, 5000);
+                callback.audio(pcmData, pcmDataLength);
+            } catch (mumlib::AudioException &exp) {
+                logger.warn("Audio decode error: %s, calling unsupportedAudio callback.", exp.what());
+                callback.unsupportedAudio(buffer, length);
+            }
+        }
+
+    private:
 
         bool processIncomingTcpMessage(MessageType messageType, uint8_t *buffer, int length) {
             switch (messageType) {
                 case MessageType::VERSION: {
                     MumbleProto::Version version;
                     version.ParseFromArray(buffer, length);
-                    callback->version(
+                    callback.version(
                             version.version() >> 16,
                             version.version() >> 8 & 0xff,
                             version.version() & 0xff,
@@ -47,7 +80,7 @@ namespace mumlib {
                 case MessageType::SERVERSYNC: {
                     MumbleProto::ServerSync serverSync;
                     serverSync.ParseFromArray(buffer, length);
-                    callback->serverSync(
+                    callback.serverSync(
                             serverSync.welcome_text(),
                             serverSync.session(),
                             serverSync.max_bandwidth(),
@@ -58,7 +91,7 @@ namespace mumlib {
                 case MessageType::CHANNELREMOVE: {
                     MumbleProto::ChannelRemove channelRemove;
                     channelRemove.ParseFromArray(buffer, length);
-                    callback->channelRemove(channelRemove.channel_id());
+                    callback.channelRemove(channelRemove.channel_id());
                 }
                     break;
                 case MessageType::CHANNELSTATE: {
@@ -83,7 +116,7 @@ namespace mumlib {
                     std::copy(channelState.links_remove().begin(), channelState.links_remove().end(),
                               links_remove.begin());
 
-                    callback->channelState(
+                    callback.channelState(
                             channelState.name(),
                             channel_id,
                             parent,
@@ -104,7 +137,7 @@ namespace mumlib {
                     bool ban = user_remove.has_ban() ? user_remove.ban()
                                                      : false; //todo make sure it's correct to assume it's false
 
-                    callback->userRemove(
+                    callback.userRemove(
                             user_remove.session(),
                             actor,
                             user_remove.reason(),
@@ -129,19 +162,19 @@ namespace mumlib {
                     int32_t priority_speaker = userState.has_priority_speaker() ? userState.priority_speaker() : -1;
                     int32_t recording = userState.has_recording() ? userState.recording() : -1;
 
-                    callback->userState(session,
-                                        actor,
-                                        userState.name(),
-                                        user_id,
-                                        channel_id,
-                                        mute,
-                                        deaf,
-                                        suppress,
-                                        self_mute,
-                                        self_deaf,
-                                        userState.comment(),
-                                        priority_speaker,
-                                        recording);
+                    callback.userState(session,
+                                       actor,
+                                       userState.name(),
+                                       user_id,
+                                       channel_id,
+                                       mute,
+                                       deaf,
+                                       suppress,
+                                       self_mute,
+                                       self_deaf,
+                                       userState.comment(),
+                                       priority_speaker,
+                                       recording);
                 }
                     break;
                 case MessageType::BANLIST: {
@@ -154,7 +187,7 @@ namespace mumlib {
                         uint32_t ip_data_size = ban.address().size();
                         int32_t duration = ban.has_duration() ? ban.duration() : -1;
 
-                        callback->banList(
+                        callback.banList(
                                 ip_data,
                                 ip_data_size,
                                 ban.mask(),
@@ -187,29 +220,29 @@ namespace mumlib {
                         tree_ids.push_back(text_message.tree_id(i));
                     }
 
-                    callback->textMessage(actor, sessions, channel_ids, tree_ids, text_message.message());
+                    callback.textMessage(actor, sessions, channel_ids, tree_ids, text_message.message());
                 }
                     break;
                 case MessageType::PERMISSIONDENIED: // 12
-                    logger->warn("PermissionDenied Message: support not implemented yet");
+                    logger.warn("PermissionDenied Message: support not implemented yet");
                     break;
                 case MessageType::ACL: // 13
-                    logger->warn("ACL Message: support not implemented yet.");
+                    logger.warn("ACL Message: support not implemented yet.");
                     break;
                 case MessageType::QUERYUSERS: // 14
-                    logger->warn("QueryUsers Message: support not implemented yet");
+                    logger.warn("QueryUsers Message: support not implemented yet");
                     break;
                 case MessageType::CONTEXTACTIONMODIFY: // 16
-                    logger->warn("ContextActionModify Message: support not implemented yet");
+                    logger.warn("ContextActionModify Message: support not implemented yet");
                     break;
                 case MessageType::CONTEXTACTION: // 17
-                    logger->warn("ContextAction Message: support not implemented yet");
+                    logger.warn("ContextAction Message: support not implemented yet");
                     break;
                 case MessageType::USERLIST: // 18
-                    logger->warn("UserList Message: support not implemented yet");
+                    logger.warn("UserList Message: support not implemented yet");
                     break;
                 case MessageType::VOICETARGET:
-                    logger->warn("VoiceTarget Message: I don't think the server ever sends this structure.");
+                    logger.warn("VoiceTarget Message: I don't think the server ever sends this structure.");
                     break;
                 case MessageType::PERMISSIONQUERY: {
                     MumbleProto::PermissionQuery permissionQuery;
@@ -219,7 +252,7 @@ namespace mumlib {
                     uint32_t permissions = permissionQuery.has_permissions() ? permissionQuery.permissions() : 0;
                     uint32_t flush = permissionQuery.has_flush() ? permissionQuery.flush() : -1;
 
-                    callback->permissionQuery(channel_id, permissions, flush);
+                    callback.permissionQuery(channel_id, permissions, flush);
                 }
                     break;
                 case MessageType::CODECVERSION: {
@@ -231,14 +264,14 @@ namespace mumlib {
                     uint32_t prefer_alpha = codecVersion.prefer_alpha();
                     int32_t opus = codecVersion.has_opus() ? codecVersion.opus() : 0;
 
-                    callback->codecVersion(alpha, beta, prefer_alpha, opus);
+                    callback.codecVersion(alpha, beta, prefer_alpha, opus);
                 }
                     break;
                 case MessageType::USERSTATS:
-                    logger->warn("UserStats Message: support not implemented yet");
+                    logger.warn("UserStats Message: support not implemented yet");
                     break;
                 case MessageType::REQUESTBLOB: // 23
-                    logger->warn("RequestBlob Message: I don't think this is sent by the server.");
+                    logger.warn("RequestBlob Message: I don't think this is sent by the server.");
                     break;
                 case MessageType::SERVERCONFIG: {
                     MumbleProto::ServerConfig serverConfig;
@@ -250,12 +283,12 @@ namespace mumlib {
                     uint32_t image_message_length = serverConfig.has_image_message_length()
                                                     ? serverConfig.image_message_length() : 0;
 
-                    callback->serverConfig(max_bandwidth, serverConfig.welcome_text(), allow_html, message_length,
-                                           image_message_length);
+                    callback.serverConfig(max_bandwidth, serverConfig.welcome_text(), allow_html, message_length,
+                                          image_message_length);
                 }
                     break;
                 case MessageType::SUGGESTCONFIG: // 25
-                    logger->warn("SuggestConfig Message: support not implemented yet");
+                    logger.warn("SuggestConfig Message: support not implemented yet");
                     break;
                 default:
                     throw MumlibException("unknown message type: " + to_string(static_cast<int>(messageType)));
@@ -263,74 +296,48 @@ namespace mumlib {
             return true;
         }
 
-        bool processAudioPacket(AudioPacketType type, uint8_t *buffer, int length) {
-            logger->info("Got %d B of encoded audio data.", length);
-            try {
-                int16_t pcmData[5000];
-                int pcmDataLength = audio->decodeAudioPacket(type, buffer, length, pcmData, 5000);
-                callback->audio(pcmData, pcmDataLength);
-            } catch (mumlib::AudioException &exp) {
-                logger->warn("Audio decode error: %s, calling unsupportedAudio callback.", exp.what());
-                callback->unsupportedAudio(buffer, length);
-            }
-        }
 
     };
 
+    Mumlib::Mumlib(Callback &callback)
+            : impl(new _Mumlib_Private(callback)) {
+    }
+
+    Mumlib::Mumlib(Callback &callback, io_service &ioService)
+            : impl(new _Mumlib_Private(callback, ioService)) { }
+
+    Mumlib::~Mumlib() {
+        delete impl;
+    }
+
 
     ConnectionState Mumlib::getConnectionState() {
-        return impl->transport->getConnectionState();
-    }
-}
-
-mumlib::Mumlib::Mumlib() : impl(new _Mumlib_Private) {
-    impl->logger = &(log4cpp::Category::getInstance("mumlib.Mumlib"));
-    impl->externalIoService = false;
-    impl->ioService = new io_service();
-    impl->audio = new Audio();
-    impl->transport = new Transport(
-            *(impl->ioService),
-            boost::bind(&_Mumlib_Private::processIncomingTcpMessage, impl, _1, _2, _3),
-            boost::bind(&_Mumlib_Private::processAudioPacket, impl, _1, _2, _3)
-    );
-}
-
-mumlib::Mumlib::Mumlib(io_service &ioService) : impl(new _Mumlib_Private) {
-    //todo do this constructor
-    throw mumlib::MumlibException("not implented yet");
-}
-
-mumlib::Mumlib::~Mumlib() {
-
-    if (not impl->externalIoService) {
-        delete impl->ioService;
+        return impl->transport.getConnectionState();
     }
 
-    delete impl;
-}
-
-void mumlib::Mumlib::setCallback(Callback &callback) {
-    impl->callback = &callback;
-}
-
-void mumlib::Mumlib::connect(string host, int port, string user, string password) {
-    impl->transport->connect(host, port, user, password);
-}
-
-void mumlib::Mumlib::disconnect() {
-    impl->transport->disconnect();
-}
-
-void mumlib::Mumlib::run() {
-    if (impl->externalIoService) {
-        throw MumlibException("can't call run() when using external io_service");
+    void Mumlib::setCallback(Callback &callback) {
+        impl->callback = callback;
     }
 
-    impl->ioService->run();
-}
+    void Mumlib::connect(string host, int port, string user, string password) {
+        impl->transport.connect(host, port, user, password);
+    }
 
-void mumlib::Mumlib::sendAudioData(int16_t *pcmData, int pcmLength) {
-    uint8_t encodedData[5000];
-    int length = impl->audio->encodeAudioPacket(0, pcmData, pcmLength, encodedData, 5000);
-    impl->transport->sendEncodedAudioPacket(encodedData, length);
+    void Mumlib::disconnect() {
+        impl->transport.disconnect();
+    }
+
+    void Mumlib::run() {
+        if (impl->externalIoService) {
+            throw MumlibException("can't call run() when using external io_service");
+        }
+
+        impl->ioService.run();
+    }
+
+    void Mumlib::sendAudioData(int16_t *pcmData, int pcmLength) {
+        uint8_t encodedData[5000];
+        int length = impl->audio.encodeAudioPacket(0, pcmData, pcmLength, encodedData, 5000);
+        impl->transport.sendEncodedAudioPacket(encodedData, length);
+    }
 }

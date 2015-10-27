@@ -23,9 +23,9 @@ namespace mumlib {
 
     class Mumlib : boost::noncopyable {
     public:
-        Mumlib();
+        Mumlib(Callback &callback);
 
-        Mumlib(io_service &ioService);
+        Mumlib(Callback &callback, io_service &ioService);
 
         ~Mumlib();
 

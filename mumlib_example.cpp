@@ -31,7 +31,7 @@ int main(int argc, char *argv[]) {
     log4cpp::Appender *appender1 = new log4cpp::OstreamAppender("console", &std::cout);
     appender1->setLayout(new log4cpp::BasicLayout());
     log4cpp::Category &logger = log4cpp::Category::getRoot();
-    logger.setPriority(log4cpp::Priority::DEBUG);
+    logger.setPriority(log4cpp::Priority::NOTICE);
     logger.addAppender(appender1);
 
     if (argc < 3) {
@@ -39,10 +39,8 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    mumlib::Mumlib mum;
-
     mumlib::BasicCallback callback;
-    mum.setCallback(callback);
+    mumlib::Mumlib mum(callback);
 
     mum.connect(argv[1], 64738, "mumlib_example", argv[2]);
 
