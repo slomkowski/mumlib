@@ -30,7 +30,7 @@ mumlib::Transport::Transport(
         mumlib::ProcessControlMessageFunction processMessageFunc,
         ProcessEncodedAudioPacketFunction processEncodedAudioPacketFunction,
         bool noUdp) :
-        logger(log4cpp::Category::getInstance("Mumlib.Transport")),
+        logger(log4cpp::Category::getInstance("mumlib.Transport")),
         ioService(ioService),
         processMessageFunction(processMessageFunc),
         processEncodedAudioPacketFunction(processEncodedAudioPacketFunction),
@@ -154,7 +154,7 @@ void mumlib::Transport::doReceiveUdp() {
 
                         if (udpActive == false) {
                             udpActive = true;
-                            logger.info("UDP is up.");
+                            logger.notice("UDP is up.");
                         }
 
                         uint8_t plainBuffer[1024];
@@ -374,12 +374,6 @@ void mumlib::Transport::processMessageInternal(MessageType messageType, uint8_t 
             } else {
                 logger.info("Ignoring crypt setup message, because UDP is disabled.");
             }
-        }
-            break;
-        case MessageType::VOICETARGET: {
-            MumbleProto::VoiceTarget voiceTarget;
-            voiceTarget.ParseFromArray(buffer, length);
-            logger.warn("VoiceTarget Message: I don't think the server ever sends this structure....");
         }
             break;
         default: {

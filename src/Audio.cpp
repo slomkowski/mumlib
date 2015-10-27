@@ -4,7 +4,7 @@
 
 mumlib::Audio::Audio()
         :
-        logger(log4cpp::Category::getInstance("Mumlib.Audio")),
+        logger(log4cpp::Category::getInstance("mumlib.Audio")),
         opusDecoder(nullptr),
         opusEncoder(nullptr),
         outgoingSequenceNumber(1) {

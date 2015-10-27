@@ -10,7 +10,7 @@ namespace mumlib {
 
     class Callback {
     public:
-        virtual void version_callback(
+        virtual void version(
                 uint16_t major,
                 uint8_t minor,
                 uint8_t patch,
@@ -18,23 +18,23 @@ namespace mumlib {
                 string os,
                 string os_version) { };
 
-        virtual void audio_callback(
-                uint8_t *pcm_data,
+        virtual void audio(
+                int16_t *pcm_data,
                 uint32_t pcm_data_size) { };
 
-        virtual void unsupported_audio_callback(
+        virtual void unsupportedAudio(
                 uint8_t *encoded_audio_data,
                 uint32_t encoded_audio_data_size) { };
 
-        virtual void serversync_callback(
+        virtual void serverSync(
                 string welcome_text,
                 int32_t session,
                 int32_t max_bandwidth,
                 int64_t permissions) { };
 
-        virtual void channelremove_callback(uint32_t channel_id) { };
+        virtual void channelRemove(uint32_t channel_id) { };
 
-        virtual void channelstate_callback(
+        virtual void channelState(
                 string name,
                 int32_t channel_id,
                 int32_t parent,
@@ -45,13 +45,13 @@ namespace mumlib {
                 bool temporary,
                 int32_t position) { };
 
-        virtual void userremove_callback(
+        virtual void userRemove(
                 uint32_t session,
                 int32_t actor,
                 string reason,
                 bool ban) { };
 
-        virtual void userstate_callback(
+        virtual void userState(
                 int32_t session,
                 int32_t actor,
                 string name,
@@ -66,8 +66,8 @@ namespace mumlib {
                 int32_t priority_speaker,
                 int32_t recording) { };
 
-        virtual void banlist_callback(
-                uint8_t *ip_data,
+        virtual void banList(
+                const uint8_t *ip_data,
                 uint32_t ip_data_size,
                 uint32_t mask,
                 string name,
@@ -76,17 +76,14 @@ namespace mumlib {
                 string start,
                 int32_t duration) { };
 
-        virtual void textmessage_callback(
+        virtual void textMessage(
                 uint32_t actor,
-                uint32_t n_session,
-                uint32_t *session,
-                uint32_t n_channel_id,
-                uint32_t *channel_id,
-                uint32_t n_tree_id,
-                uint32_t *tree_id,
+                std::vector<uint32_t> session,
+                std::vector<uint32_t> channel_id,
+                std::vector<uint32_t> tree_id,
                 string message) { };
 
-        virtual void permissiondenied_callback(
+        virtual void permissionDenied(
                 int32_t permission,
                 int32_t channel_id,
                 int32_t session,
@@ -94,64 +91,48 @@ namespace mumlib {
                 int32_t deny_type,
                 string name) { };
 
-        virtual void acl_callback() { };
-
-        virtual void queryusers_callback(
+        virtual void queryUsers(
                 uint32_t n_ids,
                 uint32_t *ids,
                 uint32_t n_names,
                 string *names) { };
 
-        virtual void cryptsetup_callback(
-                uint32_t key_size,
-                uint8_t *key,
-                uint32_t client_nonce_size,
-                uint8_t *client_nonce,
-                uint32_t server_nonce_size,
-                uint8_t *server_nonce) { };
-
-        virtual void contextactionmodify_callback(
+        virtual void contextActionModify(
                 string action,
                 string text,
                 uint32_t m_context,
                 uint32_t operation) { };
 
-        virtual void contextaction_callback(
+        virtual void contextAction(
                 int32_t session,
                 int32_t channel_id,
                 string action) { };
 
-        virtual void userlist_callback(
+        virtual void userList(
                 uint32_t user_id,
                 string name,
                 string last_seen,
                 int32_t last_channel) { };
 
-        virtual void voicetarget_callback() { };
-
-        virtual void permissionquery_callback(
+        virtual void permissionQuery(
                 int32_t channel_id,
                 uint32_t permissions,
                 int32_t flush) { };
 
-        virtual void codecversion_callback(
+        virtual void codecVersion(
                 int32_t alpha,
                 int32_t beta,
                 uint32_t prefer_alpha,
                 int32_t opus) { };
 
-        virtual void userstats_callback() { };
-
-        virtual void requestblob_callback() { };
-
-        virtual void serverconfig_callback(
+        virtual void serverConfig(
                 uint32_t max_bandwidth,
                 string welcome_text,
                 uint32_t allow_html,
                 uint32_t message_length,
                 uint32_t image_message_length) { };
 
-        virtual void suggestconfig_callback(
+        virtual void suggestConfig(
                 uint32_t version,
                 uint32_t positional,
                 uint32_t push_to_talk) { };
@@ -166,7 +147,7 @@ namespace mumlib {
 
         ~BasicCallback();
 
-        virtual void version_callback(
+        virtual void version(
                 uint16_t major,
                 uint8_t minor,
                 uint8_t patch,
@@ -174,23 +155,23 @@ namespace mumlib {
                 string os,
                 string os_version);
 
-        virtual void audio_callback(
-                uint8_t *pcm_data,
+        virtual void audio(
+                int16_t *pcm_data,
                 uint32_t pcm_data_size);
 
-        virtual void unsupported_audio_callback(
+        virtual void unsupportedAudio(
                 uint8_t *encoded_audio_data,
                 uint32_t encoded_audio_data_size);
 
-        virtual void serversync_callback(
+        virtual void serverSync(
                 string welcome_text,
                 int32_t session,
                 int32_t max_bandwidth,
                 int64_t permissions);
 
-        virtual void channelremove_callback(uint32_t channel_id);
+        virtual void channelRemove(uint32_t channel_id);
 
-        virtual void channelstate_callback(
+        virtual void channelState(
                 string name,
                 int32_t channel_id,
                 int32_t parent,
@@ -201,13 +182,13 @@ namespace mumlib {
                 bool temporary,
                 int32_t position);
 
-        virtual void userremove_callback(
+        virtual void userRemove(
                 uint32_t session,
                 int32_t actor,
                 string reason,
                 bool ban);
 
-        virtual void userstate_callback(
+        virtual void userState(
                 int32_t session,
                 int32_t actor,
                 string name,
@@ -222,8 +203,8 @@ namespace mumlib {
                 int32_t priority_speaker,
                 int32_t recording);
 
-        virtual void banlist_callback(
-                uint8_t *ip_data,
+        virtual void banList(
+                const uint8_t *ip_data,
                 uint32_t ip_data_size,
                 uint32_t mask,
                 string name,
@@ -232,17 +213,14 @@ namespace mumlib {
                 string start,
                 int32_t duration);
 
-        virtual void textmessage_callback(
+        virtual void textMessage(
                 uint32_t actor,
-                uint32_t n_session,
-                uint32_t *session,
-                uint32_t n_channel_id,
-                uint32_t *channel_id,
-                uint32_t n_tree_id,
-                uint32_t *tree_id,
+                std::vector<uint32_t> session,
+                std::vector<uint32_t> channel_id,
+                std::vector<uint32_t> tree_id,
                 string message);
 
-        virtual void permissiondenied_callback(
+        virtual void permissionDenied(
                 int32_t permission,
                 int32_t channel_id,
                 int32_t session,
@@ -250,64 +228,48 @@ namespace mumlib {
                 int32_t deny_type,
                 string name);
 
-        virtual void acl_callback();
-
-        virtual void queryusers_callback(
+        virtual void queryUsers(
                 uint32_t n_ids,
                 uint32_t *ids,
                 uint32_t n_names,
                 string *names);
 
-        virtual void cryptsetup_callback(
-                uint32_t key_size,
-                uint8_t *key,
-                uint32_t client_nonce_size,
-                uint8_t *client_nonce,
-                uint32_t server_nonce_size,
-                uint8_t *server_nonce);
-
-        virtual void contextactionmodify_callback(
+        virtual void contextActionModify(
                 string action,
                 string text,
                 uint32_t m_context,
                 uint32_t operation);
 
-        virtual void contextaction_callback(
+        virtual void contextAction(
                 int32_t session,
                 int32_t channel_id,
                 string action);
 
-        virtual void userlist_callback(
+        virtual void userList(
                 uint32_t user_id,
                 string name,
                 string last_seen,
                 int32_t last_channel);
 
-        virtual void voicetarget_callback();
-
-        virtual void permissionquery_callback(
+        virtual void permissionQuery(
                 int32_t channel_id,
                 uint32_t permissions,
                 int32_t flush);
 
-        virtual void codecversion_callback(
+        virtual void codecVersion(
                 int32_t alpha,
                 int32_t beta,
                 uint32_t prefer_alpha,
                 int32_t opus);
 
-        virtual void userstats_callback();
-
-        virtual void requestblob_callback();
-
-        virtual void serverconfig_callback(
+        virtual void serverConfig(
                 uint32_t max_bandwidth,
                 string welcome_text,
                 uint32_t allow_html,
                 uint32_t message_length,
                 uint32_t image_message_length);
 
-        virtual void suggestconfig_callback(
+        virtual void suggestConfig(
                 uint32_t version,
                 uint32_t positional,
                 uint32_t push_to_talk);

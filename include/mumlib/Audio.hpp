@@ -8,6 +8,8 @@ namespace mumlib {
 
     constexpr int SAMPLE_RATE = 48000;
 
+    class MumlibException;
+
     class AudioException : public MumlibException {
     public:
         AudioException(string message) : MumlibException(message) { }
