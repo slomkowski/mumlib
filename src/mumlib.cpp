@@ -30,6 +30,8 @@ namespace mumlib {
 
         Audio audio;
 
+        int sessionId = 0;
+        int channelId = 0;
 
         _Mumlib_Private(Callback &callback)
                 : _Mumlib_Private(callback, *(new io_service())) {
@@ -80,6 +82,9 @@ namespace mumlib {
                 case MessageType::SERVERSYNC: {
                     MumbleProto::ServerSync serverSync;
                     serverSync.ParseFromArray(buffer, length);
+
+                    sessionId = serverSync.session();
+
                     callback.serverSync(
                             serverSync.welcome_text(),
                             serverSync.session(),
@@ -115,6 +120,8 @@ namespace mumlib {
                     vector<uint32_t> links_remove;
                     std::copy(channelState.links_remove().begin(), channelState.links_remove().end(),
                               links_remove.begin());
+
+                    this->channelId = channel_id;
 
                     callback.channelState(
                             channelState.name(),
@@ -310,13 +317,8 @@ namespace mumlib {
         delete impl;
     }
 
-
     ConnectionState Mumlib::getConnectionState() {
         return impl->transport.getConnectionState();
-    }
-
-    void Mumlib::setCallback(Callback &callback) {
-        impl->callback = callback;
     }
 
     void Mumlib::connect(string host, int port, string user, string password) {
@@ -339,5 +341,13 @@ namespace mumlib {
         uint8_t encodedData[5000];
         int length = impl->audio.encodeAudioPacket(0, pcmData, pcmLength, encodedData, 5000);
         impl->transport.sendEncodedAudioPacket(encodedData, length);
+    }
+
+    void Mumlib::sendTextMessage(string message) {
+        MumbleProto::TextMessage textMessage;
+        textMessage.set_actor(impl->sessionId);
+        textMessage.add_channel_id(impl->channelId);
+        textMessage.set_message(message);
+        impl->transport.sendControlMessage(MessageType::TEXTMESSAGE, textMessage);
     }
 }

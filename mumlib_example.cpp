@@ -11,6 +11,16 @@ public:
     virtual void audio(int16_t *pcm_data, uint32_t pcm_data_size) {
         mum->sendAudioData(pcm_data, pcm_data_size);
     }
+
+    virtual void textMessage(
+            uint32_t actor,
+            std::vector<uint32_t> session,
+            std::vector<uint32_t> channel_id,
+            std::vector<uint32_t> tree_id,
+            std::string message) {
+        mumlib::BasicCallback::textMessage(actor, session, channel_id, tree_id, message);
+        mum->sendTextMessage("someone said: " + message);
+    }
 };
 
 int main(int argc, char *argv[]) {

@@ -29,8 +29,6 @@ namespace mumlib {
 
         ~Mumlib();
 
-        void setCallback(Callback &callback);
-
         void connect(string host, int port, string user, string password);
 
         void disconnect();
@@ -40,6 +38,8 @@ namespace mumlib {
         ConnectionState getConnectionState();
 
         void sendAudioData(int16_t *pcmData, int pcmLength);
+
+        void sendTextMessage(std::string message);
 
     private:
         _Mumlib_Private *impl;
