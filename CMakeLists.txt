@@ -1,13 +1,12 @@
-cmake_minimum_required(VERSION 3.1.1)
-project(libmumble)
+cmake_minimum_required(VERSION 3.0.1)
+project(mumlib)
 
-list(APPEND CMAKE_C_FLAGS " -std=c99 -g -Wall -pedantic ${CMAKE_C_FLAGS}")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 add_definitions(-DOPT_TLS_GNUTLS -D_POSIX_C_SOURCE=200112L)
 
 INCLUDE(FindPkgConfig)
 find_package(PkgConfig REQUIRED)
-find_package(Boost COMPONENTS system unit_test_framework program_options filesystem REQUIRED)
+find_package(Boost COMPONENTS system REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(Protobuf REQUIRED)
 
