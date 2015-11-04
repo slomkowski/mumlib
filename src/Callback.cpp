@@ -1,6 +1,6 @@
 #include "mumlib/Callback.hpp"
 
-#include <boost/core/noncopyable.hpp>
+#include <boost/noncopyable.hpp>
 #include <log4cpp/Category.hh>
 
 using namespace std;

@@ -6,7 +6,7 @@
 
 #include "mumlib.hpp"
 
-#include <boost/asio/ssl.hpp>
+#include <boost/asio.hpp>
 #include <boost/bind.hpp>
 #include <log4cpp/Category.hh>
 
