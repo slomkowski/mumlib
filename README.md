@@ -1,2 +1,45 @@
-# mumlib
-Simple Mumble library using boost::asio, non-functional, still in development.
+# mumlib - simple Mumble client library
+
+Fairy simple Mumble library written in C++, using *boost::asio* asynchronous networking framework. Library supports:
+
+* audio streaming through TCP and UDP channel
+* text messaging
+
+Todo:
+
+* channel support
+* user information
+* remaining server messages (ACL, user stats etc)
+
+## Dependencies
+
+* Boost libraries
+* OpenSSL
+* *log4cpp*
+* Opus library
+* Google Protobuf: libraries and compiler
+* CMake
+
+## Build
+
+The library uses CMake build system:
+
+```
+mkdir build && cd build
+cmake ..
+make
+```
+
+## Usage
+
+Sample usage is covered in *mumlib_example.cpp* file. Basically, you should extend *mumlib::Callback* class
+to implement your own handlers.
+
+## Credits
+
+2015 Michał Słomkowski. The code is published under the terms of Lesser General Public License Version 3.
+
+The library contains code from following 3rd party projects:
+
+* official Mumble Client: https://github.com/mumble-voip/mumble
+* *libmumble*: https://github.com/cornejo/libmumble
