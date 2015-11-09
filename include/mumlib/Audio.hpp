@@ -4,6 +4,8 @@
 
 #include <opus.h>
 
+#include <chrono>
+
 namespace mumlib {
 
     constexpr int SAMPLE_RATE = 48000;
@@ -32,6 +34,8 @@ namespace mumlib {
                 uint8_t *outputBuffer,
                 int outputBufferSize = MAX_UDP_LENGTH);
 
+        void resetEncoder();
+
     private:
         log4cpp::Category &logger;
 
@@ -39,5 +43,7 @@ namespace mumlib {
         OpusEncoder *opusEncoder;
 
         int64_t outgoingSequenceNumber;
+
+        std::chrono::time_point<std::chrono::system_clock> lastEncodedAudioPacketTimestamp;
     };
 }

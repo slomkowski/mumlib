@@ -2,12 +2,13 @@
 
 #include <boost/format.hpp>
 
+static boost::posix_time::seconds RESET_SEQUENCE_NUMBER_INTERVAL(5);
+
 mumlib::Audio::Audio()
-        :
-        logger(log4cpp::Category::getInstance("mumlib.Audio")),
-        opusDecoder(nullptr),
-        opusEncoder(nullptr),
-        outgoingSequenceNumber(1) {
+        : logger(log4cpp::Category::getInstance("mumlib.Audio")),
+          opusDecoder(nullptr),
+          opusEncoder(nullptr),
+          outgoingSequenceNumber(0) {
 
     int error;
 
@@ -22,6 +23,8 @@ mumlib::Audio::Audio()
     }
 
     opus_encoder_ctl(opusEncoder, OPUS_SET_VBR(0));
+
+    resetEncoder();
 }
 
 mumlib::Audio::~Audio() {
@@ -89,8 +92,16 @@ int mumlib::Audio::decodeAudioPacket(AudioPacketType type,
 
 int mumlib::Audio::encodeAudioPacket(int target, int16_t *inputPcmBuffer, int inputLength, uint8_t *outputBuffer,
                                      int outputBufferSize) {
-    //if (!bPreviousVoice)
-    //    opus_encoder_ctl(opusState, OPUS_RESET_STATE, NULL); //todo do something with it
+
+    using namespace std::chrono;
+
+    const int lastAudioPacketSentInterval = duration_cast<milliseconds>(
+            system_clock::now() - lastEncodedAudioPacketTimestamp).count();
+
+    if (lastAudioPacketSentInterval > RESET_SEQUENCE_NUMBER_INTERVAL.total_milliseconds() + 1000) {
+        logger.debug("Last audio packet was sent %d ms ago, resetting encoder.", lastAudioPacketSentInterval);
+        resetEncoder();
+    }
 
     std::vector<uint8_t> header;
 
@@ -118,7 +129,21 @@ int mumlib::Audio::encodeAudioPacket(int target, int16_t *inputPcmBuffer, int in
     memcpy(outputBuffer, &header[0], header.size());
     memcpy(outputBuffer + header.size(), tmpOpusBuffer, outputSize);
 
-    outgoingSequenceNumber += 2;
+    int incrementNumber = 100 * inputLength / SAMPLE_RATE;
+
+    outgoingSequenceNumber += incrementNumber;
+
+    lastEncodedAudioPacketTimestamp = std::chrono::system_clock::now();
 
     return outputSize + header.size();
+}
+
+void mumlib::Audio::resetEncoder() {
+    int status = opus_encoder_ctl(opusEncoder, OPUS_RESET_STATE, nullptr);
+
+    if (status != OPUS_OK) {
+        throw AudioException((boost::format("failed to reset encoder: %s") % opus_strerror(status)).str());
+    }
+
+    outgoingSequenceNumber = 0;
 }
