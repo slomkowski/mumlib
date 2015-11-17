@@ -12,7 +12,7 @@ public:
                        int sessionId,
                        int sequenceNumber,
                        int16_t *pcm_data,
-                       uint32_t pcm_data_size) {
+                       uint32_t pcm_data_size) override {
         mum->sendAudioData(pcm_data, pcm_data_size);
     }
 
@@ -21,7 +21,7 @@ public:
             std::vector<uint32_t> session,
             std::vector<uint32_t> channel_id,
             std::vector<uint32_t> tree_id,
-            std::string message) {
+            std::string message) override {
         mumlib::BasicCallback::textMessage(actor, session, channel_id, tree_id, message);
         mum->sendTextMessage("someone said: " + message);
     }
