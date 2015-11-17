@@ -19,10 +19,16 @@ namespace mumlib {
                 string os_version) { };
 
         virtual void audio(
+                int target,
+                int sessionId,
+                int sequenceNumber,
                 int16_t *pcm_data,
                 uint32_t pcm_data_size) { };
 
         virtual void unsupportedAudio(
+                int target,
+                int sessionId,
+                int sequenceNumber,
                 uint8_t *encoded_audio_data,
                 uint32_t encoded_audio_data_size) { };
 
@@ -156,10 +162,16 @@ namespace mumlib {
                 string os_version);
 
         virtual void audio(
+                int target,
+                int sessionId,
+                int sequenceNumber,
                 int16_t *pcm_data,
                 uint32_t pcm_data_size);
 
         virtual void unsupportedAudio(
+                int target,
+                int sessionId,
+                int sequenceNumber,
                 uint8_t *encoded_audio_data,
                 uint32_t encoded_audio_data_size);
 

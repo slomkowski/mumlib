@@ -36,13 +36,23 @@ void mumlib::BasicCallback::version(
 }
 
 void mumlib::BasicCallback::audio(
+        int target,
+        int sessionId,
+        int sequenceNumber,
         int16_t *pcmData,
         uint32_t pcm_data_size) {
-    impl->logger.debug("audio: %d bytes of raw PCM data.", pcm_data_size);
+    impl->logger.debug("audio: %d bytes of raw PCM data, target: %d, session: %d, seq: %d.",
+                       pcm_data_size, target, sessionId, sequenceNumber);
 }
 
-void BasicCallback::unsupportedAudio(uint8_t *encoded_audio_data, uint32_t encoded_audio_data_size) {
-    impl->logger.debug("unsupportedAudio: received %d bytes of encoded data.", encoded_audio_data_size);
+void BasicCallback::unsupportedAudio(
+        int target,
+        int sessionId,
+        int sequenceNumber,
+        uint8_t *encoded_audio_data,
+        uint32_t encoded_audio_data_size) {
+    impl->logger.debug("unsupportedAudio: received %d bytes of encoded data, target: %d, session: %d, seq: %d.",
+                       encoded_audio_data_size, target, sessionId, sequenceNumber);
 }
 
 void BasicCallback::serverSync(string welcome_text, int32_t session, int32_t max_bandwidth, int64_t permissions) {

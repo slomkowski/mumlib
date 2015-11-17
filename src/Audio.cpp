@@ -37,33 +37,24 @@ mumlib::Audio::~Audio() {
     }
 }
 
-int mumlib::Audio::decodeAudioPacket(AudioPacketType type,
-                                     uint8_t *inputBuffer,
-                                     int inputLength,
-                                     int16_t *pcmBuffer,
-                                     int pcmBufferSize) {
-
-    if (type != AudioPacketType::OPUS) {
-        throw AudioException("codecs other than OPUS are not supported");
-    }
-
-    int target = inputBuffer[0] & 0x1F;
-
-    int64_t sessionId;
-    int64_t sequenceNumber;
+std::pair<int, bool>  mumlib::Audio::decodeOpusPayload(uint8_t *inputBuffer,
+                                                       int inputLength,
+                                                       int16_t *pcmBuffer,
+                                                       int pcmBufferSize) {
     int64_t opusDataLength;
 
-    std::array<int64_t *, 3> varInts = {&sessionId, &sequenceNumber, &opusDataLength};
-
-    int dataPointer = 1;
-    for (int64_t *val : varInts) {
-        VarInt varInt(&inputBuffer[dataPointer]);
-        *val = varInt.getValue();
-        dataPointer += varInt.getEncoded().size();
-    }
+    int dataPointer = 0;
+    VarInt varInt(inputBuffer);
+    opusDataLength = varInt.getValue();
+    dataPointer += varInt.getEncoded().size();
 
     bool lastPacket = (opusDataLength & 0x2000) != 0;
     opusDataLength = opusDataLength & 0x1fff;
+
+    if (inputLength < opusDataLength + dataPointer) {
+        throw AudioException((boost::format("invalid Opus payload (%d B): header %d B, expected Opus data length %d B")
+                              % inputLength % dataPointer % opusDataLength).str());
+    }
 
     int outputSize = opus_decode(opusDecoder,
                                  reinterpret_cast<const unsigned char *>(&inputBuffer[dataPointer]),
@@ -77,17 +68,10 @@ int mumlib::Audio::decodeAudioPacket(AudioPacketType type,
                               opus_strerror(outputSize)).str());
     }
 
-    logger.debug(
-            "Received %d B of OPUS data, decoded to %d B (target: %d, sessionID: %ld, seq num: %ld, last: %d).",
-            opusDataLength,
-            outputSize,
-            target,
-            sessionId,
-            sequenceNumber,
-            lastPacket);
+    logger.debug("%d B of Opus data decoded to %d PCM samples, last packet: %d.",
+                 opusDataLength, outputSize, lastPacket);
 
-
-    return outputSize;
+    return std::make_pair(outputSize, lastPacket);
 }
 
 int mumlib::Audio::encodeAudioPacket(int target, int16_t *inputPcmBuffer, int inputLength, uint8_t *outputBuffer,
@@ -146,4 +130,39 @@ void mumlib::Audio::resetEncoder() {
     }
 
     outgoingSequenceNumber = 0;
+}
+
+mumlib::IncomingAudioPacket mumlib::Audio::decodeIncomingAudioPacket(uint8_t *inputBuffer, int inputBufferLength) {
+    mumlib::IncomingAudioPacket incomingAudioPacket;
+
+    incomingAudioPacket.type = static_cast<AudioPacketType >((inputBuffer[0] & 0xE0) >> 5);
+    incomingAudioPacket.target = inputBuffer[0] & 0x1F;
+
+    std::array<int64_t *, 2> varInts = {&incomingAudioPacket.sessionId, &incomingAudioPacket.sequenceNumber};
+
+    int dataPointer = 1;
+    for (int64_t *val : varInts) {
+        VarInt varInt(&inputBuffer[dataPointer]);
+        *val = varInt.getValue();
+        dataPointer += varInt.getEncoded().size();
+    }
+
+    incomingAudioPacket.audioPayload = &inputBuffer[dataPointer];
+    incomingAudioPacket.audioPayloadLength = inputBufferLength - dataPointer;
+
+    if (dataPointer >= inputBufferLength) {
+        throw AudioException((boost::format("invalid incoming audio packet (%d B): header %d B") % inputBufferLength %
+                              dataPointer).str());
+    }
+
+    logger.debug(
+            "Received %d B of audio packet, %d B header, %d B payload (target: %d, sessionID: %ld, seq num: %ld).",
+            inputBufferLength,
+            dataPointer,
+            incomingAudioPacket.audioPayloadLength,
+            incomingAudioPacket.target,
+            incomingAudioPacket.sessionId,
+            incomingAudioPacket.sequenceNumber);
+
+    return incomingAudioPacket;
 }

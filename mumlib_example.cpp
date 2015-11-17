@@ -8,7 +8,11 @@ class MyCallback : public mumlib::BasicCallback {
 public:
     mumlib::Mumlib *mum;
 
-    virtual void audio(int16_t *pcm_data, uint32_t pcm_data_size) {
+    virtual void audio(int target,
+                       int sessionId,
+                       int sequenceNumber,
+                       int16_t *pcm_data,
+                       uint32_t pcm_data_size) {
         mum->sendAudioData(pcm_data, pcm_data_size);
     }
 

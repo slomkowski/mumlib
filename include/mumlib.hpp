@@ -27,7 +27,7 @@ namespace mumlib {
 
         Mumlib(Callback &callback, io_service &ioService);
 
-        ~Mumlib();
+        virtual ~Mumlib();
 
         void connect(string host, int port, string user, string password);
 

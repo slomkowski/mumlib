@@ -45,7 +45,7 @@ namespace mumlib {
                   transport(ioService, boost::bind(&_Mumlib_Private::processIncomingTcpMessage, this, _1, _2, _3),
                             boost::bind(&_Mumlib_Private::processAudioPacket, this, _1, _2, _3)) { }
 
-        ~_Mumlib_Private() {
+        virtual ~_Mumlib_Private() {
             if (not externalIoService) {
                 delete &ioService;
             }
@@ -54,13 +54,34 @@ namespace mumlib {
         bool processAudioPacket(AudioPacketType type, uint8_t *buffer, int length) {
             logger.info("Got %d B of encoded audio data.", length);
             try {
-                int16_t pcmData[5000];
-                int pcmDataLength = audio.decodeAudioPacket(type, buffer, length, pcmData, 5000);
-                callback.audio(pcmData, pcmDataLength);
+                auto incomingAudioPacket = audio.decodeIncomingAudioPacket(buffer, length);
+
+                if (type == AudioPacketType::OPUS) {
+                    int16_t pcmData[5000];
+                    auto status = audio.decodeOpusPayload(incomingAudioPacket.audioPayload,
+                                                          incomingAudioPacket.audioPayloadLength,
+                                                          pcmData,
+                                                          5000);
+
+                    callback.audio(incomingAudioPacket.target,
+                                   incomingAudioPacket.sessionId,
+                                   incomingAudioPacket.sequenceNumber,
+                                   pcmData,
+                                   status.first);
+                } else {
+                    logger.warn("Incoming audio packet doesn't contain Opus data, calling unsupportedAudio callback.");
+                    callback.unsupportedAudio(incomingAudioPacket.target,
+                                              incomingAudioPacket.sessionId,
+                                              incomingAudioPacket.sequenceNumber,
+                                              incomingAudioPacket.audioPayload,
+                                              incomingAudioPacket.audioPayloadLength);
+                }
+
             } catch (mumlib::AudioException &exp) {
-                logger.warn("Audio decode error: %s, calling unsupportedAudio callback.", exp.what());
-                callback.unsupportedAudio(buffer, length);
+                logger.error("Audio decode error: %s.", exp.what());
             }
+
+            return true;
         }
 
     private:

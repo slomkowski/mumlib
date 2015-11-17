@@ -17,15 +17,27 @@ namespace mumlib {
         AudioException(string message) : MumlibException(message) { }
     };
 
+    struct IncomingAudioPacket {
+        AudioPacketType type;
+        int target;
+        int64_t sessionId;
+        int64_t sequenceNumber;
+        uint8_t *audioPayload;
+        int audioPayloadLength;
+    };
+
     class Audio : boost::noncopyable {
     public:
         Audio();
 
-        ~Audio();
+        virtual ~Audio();
 
+        IncomingAudioPacket decodeIncomingAudioPacket(uint8_t *inputBuffer, int inputBufferLength);
 
-        int decodeAudioPacket(AudioPacketType type, uint8_t *inputBuffer, int inputLength, int16_t *pcmBuffer,
-                              int pcmBufferSize);
+        std::pair<int, bool> decodeOpusPayload(uint8_t *inputBuffer,
+                                               int inputLength,
+                                               int16_t *pcmBuffer,
+                                               int pcmBufferSize);
 
         int encodeAudioPacket(
                 int target,
