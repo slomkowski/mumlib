@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0.1)
+cmake_minimum_required(VERSION 2.8.0)
 project(mumlib)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
@@ -31,7 +31,7 @@ set(MUMLIB_PRIVATE_HEADERS
         include/mumlib/Transport.hpp
         include/mumlib/Audio.hpp
         include/mumlib/enums.hpp
-)
+        )
 
 set(MUMLIB_SRC
         src/mumlib.cpp
@@ -40,7 +40,7 @@ set(MUMLIB_SRC
         src/VarInt.cpp
         src/Transport.cpp
         src/Audio.cpp
-)
+        )
 
 PROTOBUF_GENERATE_CPP(PROTO_SRCS PROTO_HDRS Mumble.proto)
 
