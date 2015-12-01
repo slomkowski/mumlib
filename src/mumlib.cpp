@@ -371,4 +371,10 @@ namespace mumlib {
         textMessage.set_message(message);
         impl->transport.sendControlMessage(MessageType::TEXTMESSAGE, textMessage);
     }
+
+    void Mumlib::joinChannel(int channel_id) {
+        MumbleProto::UserState userState;
+        userState.set_channel_id(channel_id);
+        impl->transport.sendControlMessage(MessageType::USERSTATE, userState);
+    }
 }
