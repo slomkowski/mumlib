@@ -4,6 +4,10 @@
 #include "log4cpp/FileAppender.hh"
 #include "log4cpp/OstreamAppender.hh"
 
+#include <chrono>
+#include <thread>
+#include <mumlib/Transport.hpp>
+
 class MyCallback : public mumlib::BasicCallback {
 public:
     mumlib::Mumlib *mum;
@@ -41,12 +45,18 @@ int main(int argc, char *argv[]) {
     }
 
     MyCallback myCallback;
-    mumlib::Mumlib mum(myCallback);
-    myCallback.mum = &mum;
 
-    mum.connect(argv[1], 64738, "mumlib_example", argv[2]);
+    while (true) {
+        try {
+            mumlib::Mumlib mum(myCallback);
+            myCallback.mum = &mum;
+            mum.connect(argv[1], 64738, "mumlib_example", argv[2]);
+            mum.run();
+        } catch (mumlib::TransportException &exp) {
+            logger.error("TransportException: %s.", exp.what());
 
-    mum.run();
-
-    return 0;
+            logger.notice("Attempting to reconnect in 5 s.");
+            std::this_thread::sleep_for(std::chrono::seconds(5));
+        }
+    }
 }

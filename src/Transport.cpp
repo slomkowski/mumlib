@@ -45,6 +45,10 @@ mumlib::Transport::Transport(
     pingTimer.async_wait(boost::bind(&Transport::pingTimerTick, this, _1));
 }
 
+mumlib::Transport::~Transport() {
+    disconnect();
+}
+
 void mumlib::Transport::connect(
         std::string host,
         int port,
@@ -87,12 +91,28 @@ void mumlib::Transport::connect(
 
 void mumlib::Transport::disconnect() {
 
-    state = ConnectionState::NOT_CONNECTED;
+    if (state != ConnectionState::NOT_CONNECTED) {
+        boost::system::error_code errorCode;
 
-    sslSocket.shutdown();
-    sslSocket.lowest_layer().shutdown(tcp::socket::shutdown_both);
+        // todo perform different operations for each ConnectionState
 
-    udpSocket.shutdown(udp::socket::shutdown_both);
+        sslSocket.shutdown(errorCode);
+        if (errorCode) {
+            logger.warn("SSL socket shutdown returned an error: %s.", errorCode.message().c_str());
+        }
+
+        sslSocket.lowest_layer().shutdown(tcp::socket::shutdown_both, errorCode);
+        if (errorCode) {
+            logger.warn("SSL socket lowest layer shutdown returned an error: %s.", errorCode.message().c_str());
+        }
+
+        udpSocket.close(errorCode);
+        if (errorCode) {
+            logger.warn("UDP socket close returned error: %s.", errorCode.message().c_str());
+        }
+
+        state = ConnectionState::NOT_CONNECTED;
+    }
 }
 
 
@@ -140,6 +160,10 @@ bool mumlib::Transport::isUdpActive() {
 }
 
 void mumlib::Transport::doReceiveUdp() {
+    if (state == ConnectionState::NOT_CONNECTED) {
+        return;
+    }
+
     udpSocket.async_receive_from(
             buffer(udpIncomingBuffer, MAX_UDP_LENGTH),
             udpReceiverEndpoint,
@@ -171,6 +195,8 @@ void mumlib::Transport::doReceiveUdp() {
                     }
 
                     doReceiveUdp();
+                } else if (ec == boost::asio::error::operation_aborted) {
+                    logger.debug("UDP receive function cancelled.");
                 } else {
                     throwTransportException("UDP receive failed: " + ec.message());
                 }
@@ -220,10 +246,10 @@ void mumlib::Transport::pingTimerTick(const boost::system::error_code &e) {
                 }
             }
         }
-
-        pingTimer.expires_at(pingTimer.expires_at() + PING_INTERVAL);
-        pingTimer.async_wait(boost::bind(&Transport::pingTimerTick, this, _1));
     }
+
+    pingTimer.expires_at(pingTimer.expires_at() + PING_INTERVAL);
+    pingTimer.async_wait(boost::bind(&Transport::pingTimerTick, this, _1));
 }
 
 void mumlib::Transport::sendUdpAsync(uint8_t *buff, int length) {
@@ -252,6 +278,10 @@ void mumlib::Transport::sendUdpAsync(uint8_t *buff, int length) {
 }
 
 void mumlib::Transport::doReceiveSsl() {
+    if (state == ConnectionState::NOT_CONNECTED) {
+        return;
+    }
+
     async_read(
             sslSocket,
             boost::asio::buffer(sslIncomingBuffer, MAX_TCP_LENGTH),
@@ -385,6 +415,11 @@ void mumlib::Transport::processMessageInternal(MessageType messageType, uint8_t 
 }
 
 void mumlib::Transport::sendUdpPing() {
+    if (state == ConnectionState::NOT_CONNECTED) {
+        logger.debug("State changed to NOT_CONNECTED, skipping UDP ping.");
+        return;
+    }
+
     logger.debug("Sending UDP ping.");
 
     vector<uint8_t> message;
@@ -404,7 +439,11 @@ void mumlib::Transport::sendSsl(uint8_t *buff, int length) {
 
     logger.debug("Sending %d bytes of data.", length);
 
-    write(sslSocket, boost::asio::buffer(buff, length));
+    try {
+        write(sslSocket, boost::asio::buffer(buff, length));
+    } catch (boost::system::system_error &err) {
+        throwTransportException(std::string("SSL send failed: ") + err.what());
+    }
 }
 
 void mumlib::Transport::sendSslAsync(uint8_t *buff, int length) {
@@ -428,7 +467,7 @@ void mumlib::Transport::sendSslAsync(uint8_t *buff, int length) {
                 if (!ec and bytesTransferred > 0) {
 
                 } else {
-                    throwTransportException("send failed: " + ec.message());
+                    throwTransportException("async SSL send failed: " + ec.message());
                 }
             });
 }

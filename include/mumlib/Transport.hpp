@@ -40,6 +40,8 @@ namespace mumlib {
                   ProcessEncodedAudioPacketFunction processEncodedAudioPacketFunction,
                   bool noUdp = false);
 
+        ~Transport();
+
         void connect(string host,
                      int port,
                      string user,

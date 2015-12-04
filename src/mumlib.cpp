@@ -335,6 +335,8 @@ namespace mumlib {
             : impl(new _Mumlib_Private(callback, ioService)) { }
 
     Mumlib::~Mumlib() {
+        disconnect();
+
         delete impl;
     }
 
@@ -347,7 +349,12 @@ namespace mumlib {
     }
 
     void Mumlib::disconnect() {
-        impl->transport.disconnect();
+        if (not impl->externalIoService) {
+            impl->ioService.reset();
+        }
+        if (impl->transport.getConnectionState() != ConnectionState::NOT_CONNECTED) {
+            impl->transport.disconnect();
+        }
     }
 
     void Mumlib::run() {
