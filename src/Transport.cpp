@@ -314,7 +314,8 @@ void mumlib::Transport::doReceiveSsl() {
                 } else {
                     logger.error("SSL receiver error: %s. Bytes transferred: %d.",
                                  ec.message().c_str(), bytesTransferred);
-                    throwTransportException("receive failed: " + ec.message());
+                    //todo temporarily disable exception throwing until issue #6 is solved
+                    //throwTransportException("receive failed: " + ec.message());
                 }
             });
 }
