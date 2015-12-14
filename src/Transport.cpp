@@ -292,8 +292,15 @@ void mumlib::Transport::doReceiveSsl() {
                 }
 
                 const int payloadSize = ntohl(*reinterpret_cast<uint32_t *>(sslIncomingBuffer + 2));
-                size_t remaining = payloadSize + 6 - bytesTransferred;
+                const int wholeMessageLength = payloadSize + 6;
+                size_t remaining = wholeMessageLength - bytesTransferred;
                 remaining = max(remaining, (size_t) 0);
+
+                if (wholeMessageLength > MAX_TCP_LENGTH) {
+                    throwTransportException(
+                            (boost::format("message bigger (%d B) than max allowed size (%d B)")
+                             % wholeMessageLength % MAX_TCP_LENGTH).str());
+                }
 
                 return remaining;
             },
