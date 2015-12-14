@@ -41,7 +41,7 @@ namespace mumlib {
 
         void sendTextMessage(std::string message);
 
-        void joinChannel(int channel_id);
+        void joinChannel(int channelId);
 
     private:
         _Mumlib_Private *impl;
