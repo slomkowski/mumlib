@@ -87,6 +87,8 @@ namespace mumlib {
     private:
 
         bool processIncomingTcpMessage(MessageType messageType, uint8_t *buffer, int length) {
+            logger.debug("Process incoming message: type %d, length: %d.", messageType, length);
+
             switch (messageType) {
                 case MessageType::VERSION: {
                     MumbleProto::Version version;
@@ -133,14 +135,19 @@ namespace mumlib {
                     int position = channelState.has_position() ? channelState.position() : 0;
 
                     vector<uint32_t> links;
-                    std::copy(channelState.links().begin(), channelState.links().end(), links.begin());
+                    for (int i = 0; i < channelState.links_size(); ++i) {
+                        links.push_back(channelState.links(i));
+                    }
 
                     vector<uint32_t> links_add;
-                    std::copy(channelState.links_add().begin(), channelState.links_add().end(), links_add.begin());
+                    for (int i = 0; i < channelState.links_add_size(); ++i) {
+                        links_add.push_back(channelState.links_add(i));
+                    }
 
                     vector<uint32_t> links_remove;
-                    std::copy(channelState.links_remove().begin(), channelState.links_remove().end(),
-                              links_remove.begin());
+                    for (int i = 0; i < channelState.links_remove_size(); ++i) {
+                        links_remove.push_back(channelState.links_remove(i));
+                    }
 
                     this->channelId = channel_id;
 
