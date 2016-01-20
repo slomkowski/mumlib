@@ -18,7 +18,7 @@
 namespace mumlib {
 
     constexpr int MAX_UDP_LENGTH = 1024;
-    constexpr int MAX_TCP_LENGTH = 2048;
+    constexpr int MAX_TCP_LENGTH = 129 * 1024; // 128 kB + some reserve
 
     using namespace std;
     using namespace boost::asio;
@@ -85,8 +85,7 @@ namespace mumlib {
 
         ssl::context sslContext;
         ssl::stream<tcp::socket> sslSocket;
-        uint8_t sslIncomingBuffer[MAX_TCP_LENGTH];
-
+        uint8_t *sslIncomingBuffer;
 
         deadline_timer pingTimer;
         std::chrono::time_point<std::chrono::system_clock> lastReceivedUdpPacketTimestamp;

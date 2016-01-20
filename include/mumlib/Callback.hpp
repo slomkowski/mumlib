@@ -179,7 +179,7 @@ namespace mumlib {
                 string welcome_text,
                 int32_t session,
                 int32_t max_bandwidth,
-                int64_t permissions);
+                int64_t permissions) override;
 
         virtual void channelRemove(uint32_t channel_id) override;
 

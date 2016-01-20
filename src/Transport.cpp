@@ -42,11 +42,14 @@ mumlib::Transport::Transport(
         pingTimer(ioService, PING_INTERVAL),
         asyncBufferPool(max(MAX_UDP_LENGTH, MAX_TCP_LENGTH)) {
 
+    sslIncomingBuffer = new uint8_t[MAX_TCP_LENGTH];
+
     pingTimer.async_wait(boost::bind(&Transport::pingTimerTick, this, _1));
 }
 
 mumlib::Transport::~Transport() {
     disconnect();
+    delete[] sslIncomingBuffer;
 }
 
 void mumlib::Transport::connect(
@@ -292,8 +295,15 @@ void mumlib::Transport::doReceiveSsl() {
                 }
 
                 const int payloadSize = ntohl(*reinterpret_cast<uint32_t *>(sslIncomingBuffer + 2));
-                size_t remaining = payloadSize + 6 - bytesTransferred;
+                const int wholeMessageLength = payloadSize + 6;
+                size_t remaining = wholeMessageLength - bytesTransferred;
                 remaining = max(remaining, (size_t) 0);
+
+                if (wholeMessageLength > MAX_TCP_LENGTH) {
+                    throwTransportException(
+                            (boost::format("message bigger (%d B) than max allowed size (%d B)")
+                             % wholeMessageLength % MAX_TCP_LENGTH).str());
+                }
 
                 return remaining;
             },
@@ -314,7 +324,8 @@ void mumlib::Transport::doReceiveSsl() {
                 } else {
                     logger.error("SSL receiver error: %s. Bytes transferred: %d.",
                                  ec.message().c_str(), bytesTransferred);
-                    throwTransportException("receive failed: " + ec.message());
+                    //todo temporarily disable exception throwing until issue #6 is solved
+                    //throwTransportException("receive failed: " + ec.message());
                 }
             });
 }
