@@ -42,11 +42,14 @@ mumlib::Transport::Transport(
         pingTimer(ioService, PING_INTERVAL),
         asyncBufferPool(max(MAX_UDP_LENGTH, MAX_TCP_LENGTH)) {
 
+    sslIncomingBuffer = new uint8_t[MAX_TCP_LENGTH];
+
     pingTimer.async_wait(boost::bind(&Transport::pingTimerTick, this, _1));
 }
 
 mumlib::Transport::~Transport() {
     disconnect();
+    delete[] sslIncomingBuffer;
 }
 
 void mumlib::Transport::connect(
