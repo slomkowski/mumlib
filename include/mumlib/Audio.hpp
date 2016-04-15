@@ -28,7 +28,7 @@ namespace mumlib {
 
     class Audio : boost::noncopyable {
     public:
-        Audio();
+        Audio(int opusEncoderBitrate = DEFAULT_OPUS_ENCODER_BITRATE);
 
         virtual ~Audio();
 
@@ -45,6 +45,10 @@ namespace mumlib {
                 int inputLength,
                 uint8_t *outputBuffer,
                 int outputBufferSize = MAX_UDP_LENGTH);
+
+        void setOpusEncoderBitrate(int bitrate);
+
+        int getOpusEncoderBitrate();
 
         void resetEncoder();
 

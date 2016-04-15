@@ -33,17 +33,20 @@ namespace mumlib {
         int sessionId = 0;
         int channelId = 0;
 
-        _Mumlib_Private(Callback &callback)
-                : _Mumlib_Private(callback, *(new io_service())) {
+        _Mumlib_Private(Callback &callback, MumlibConfiguration &configuration)
+                : _Mumlib_Private(callback, *(new io_service()), configuration) {
             externalIoService = false;
         }
 
-        _Mumlib_Private(Callback &callback, io_service &ioService)
+        _Mumlib_Private(Callback &callback, io_service &ioService, MumlibConfiguration &configuration)
                 : callback(callback),
                   ioService(ioService),
                   externalIoService(true),
                   transport(ioService, boost::bind(&_Mumlib_Private::processIncomingTcpMessage, this, _1, _2, _3),
-                            boost::bind(&_Mumlib_Private::processAudioPacket, this, _1, _2, _3)) { }
+                            boost::bind(&_Mumlib_Private::processAudioPacket, this, _1, _2, _3)) {
+
+            audio.setOpusEncoderBitrate(configuration.opusEncoderBitrate);
+        }
 
         virtual ~_Mumlib_Private() {
             if (not externalIoService) {
@@ -334,12 +337,21 @@ namespace mumlib {
 
     };
 
-    Mumlib::Mumlib(Callback &callback)
-            : impl(new _Mumlib_Private(callback)) {
+    Mumlib::Mumlib(Callback &callback) {
+        MumlibConfiguration conf;
+        impl = new _Mumlib_Private(callback, conf);
     }
 
-    Mumlib::Mumlib(Callback &callback, io_service &ioService)
-            : impl(new _Mumlib_Private(callback, ioService)) { }
+    Mumlib::Mumlib(Callback &callback, io_service &ioService) {
+        MumlibConfiguration conf;
+        impl = new _Mumlib_Private(callback, ioService, conf);
+    }
+
+    Mumlib::Mumlib(Callback &callback, MumlibConfiguration &configuration)
+            : impl(new _Mumlib_Private(callback, configuration)) { }
+
+    Mumlib::Mumlib(Callback &callback, io_service &ioService, MumlibConfiguration &configuration)
+            : impl(new _Mumlib_Private(callback, ioService, configuration)) { }
 
     Mumlib::~Mumlib() {
         disconnect();

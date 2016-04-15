@@ -48,7 +48,9 @@ int main(int argc, char *argv[]) {
 
     while (true) {
         try {
-            mumlib::Mumlib mum(myCallback);
+            mumlib::MumlibConfiguration conf;
+            conf.opusEncoderBitrate = 32000;
+            mumlib::Mumlib mum(myCallback, conf);
             myCallback.mum = &mum;
             mum.connect(argv[1], 64738, "mumlib_example", argv[2]);
             mum.run();

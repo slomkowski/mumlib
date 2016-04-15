@@ -4,7 +4,7 @@
 
 static boost::posix_time::seconds RESET_SEQUENCE_NUMBER_INTERVAL(5);
 
-mumlib::Audio::Audio()
+mumlib::Audio::Audio(int opusEncoderBitrate)
         : logger(log4cpp::Category::getInstance("mumlib.Audio")),
           opusDecoder(nullptr),
           opusEncoder(nullptr),
@@ -24,6 +24,8 @@ mumlib::Audio::Audio()
 
     opus_encoder_ctl(opusEncoder, OPUS_SET_VBR(0));
 
+    setOpusEncoderBitrate(opusEncoderBitrate);
+
     resetEncoder();
 }
 
@@ -35,6 +37,23 @@ mumlib::Audio::~Audio() {
     if (opusEncoder) {
         opus_encoder_destroy(opusEncoder);
     }
+}
+
+void mumlib::Audio::setOpusEncoderBitrate(int bitrate) {
+    int error = opus_encoder_ctl(opusEncoder, OPUS_SET_BITRATE(bitrate));
+    if (error != OPUS_OK) {
+        throw AudioException((boost::format("failed to initialize transmission bitrate to %d B/s: %s")
+                              % bitrate % opus_strerror(error)).str());
+    }
+}
+
+int mumlib::Audio::getOpusEncoderBitrate() {
+    opus_int32 bitrate;
+    int error = opus_encoder_ctl(opusEncoder, OPUS_GET_BITRATE(&bitrate));
+    if (error != OPUS_OK) {
+        throw AudioException((boost::format("failed to read Opus bitrate: %s") % opus_strerror(error)).str());
+    }
+    return bitrate;
 }
 
 std::pair<int, bool>  mumlib::Audio::decodeOpusPayload(uint8_t *inputBuffer,
@@ -166,3 +185,5 @@ mumlib::IncomingAudioPacket mumlib::Audio::decodeIncomingAudioPacket(uint8_t *in
 
     return incomingAudioPacket;
 }
+
+

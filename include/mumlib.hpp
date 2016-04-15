@@ -10,12 +10,19 @@
 
 namespace mumlib {
 
+    constexpr int DEFAULT_OPUS_ENCODER_BITRATE = 16000;
+
     using namespace std;
     using namespace boost::asio;
 
     class MumlibException : public runtime_error {
     public:
         MumlibException(string message) : runtime_error(message) { }
+    };
+
+    struct MumlibConfiguration {
+        int opusEncoderBitrate = DEFAULT_OPUS_ENCODER_BITRATE;
+        // additional fields will be added in the future
     };
 
     struct _Mumlib_Private;
@@ -26,6 +33,10 @@ namespace mumlib {
         Mumlib(Callback &callback);
 
         Mumlib(Callback &callback, io_service &ioService);
+
+        Mumlib(Callback &callback, MumlibConfiguration &configuration);
+
+        Mumlib(Callback &callback, io_service &ioService, MumlibConfiguration &configuration);
 
         virtual ~Mumlib();
 
