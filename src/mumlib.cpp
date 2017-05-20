@@ -404,4 +404,19 @@ namespace mumlib {
         impl->transport.sendControlMessage(MessageType::USERSTATE, userState);
         impl->channelId = channelId;
     }
+
+    void Mumlib::self_mute(int muteness) {
+        MumbleProto::UserState userState;
+        userState.set_self_mute(muteness);
+        impl->transport.sendControlMessage(MessageType::USERSTATE, userState);
+    }
+
+    void Mumlib::self_deaf(int deafness) {
+        MumbleProto::UserState userState;
+        userState.set_self_deaf(deafness);
+        impl->transport.sendControlMessage(MessageType::USERSTATE, userState);
+    }
+
+
+
 }

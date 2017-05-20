@@ -54,6 +54,10 @@ namespace mumlib {
 
         void joinChannel(int channelId);
 
+        void self_mute(int muteness);
+
+        void self_deaf(int deafness);
+
     private:
         _Mumlib_Private *impl;
     };
