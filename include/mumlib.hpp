@@ -54,8 +54,12 @@ namespace mumlib {
 
         void joinChannel(int channelId);
 
-        void self_mute(int muteness);
+        void sendUserState(mumlib::UserState field, bool val);
 
+        void sendUserState(mumlib::UserState field, string val);
+
+        // These two are deprecated by sendUserState
+        void self_mute(int muteness);
         void self_deaf(int deafness);
 
     private:
