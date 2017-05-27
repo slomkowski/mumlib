@@ -438,7 +438,7 @@ namespace mumlib {
         impl->transport.sendControlMessage(MessageType::USERSTATE, userState);
     }
 
-    void Mumlib::sendUserState(mumlib::UserState field, string val) {
+    void Mumlib::sendUserState(mumlib::UserState field, std::string val) {
         MumbleProto::UserState userState;
 
         switch (field) {
