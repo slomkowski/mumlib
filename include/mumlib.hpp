@@ -26,6 +26,8 @@ namespace mumlib {
         int opusEncoderBitrate = DEFAULT_OPUS_ENCODER_BITRATE;
         int opusSampleRate = DEFAULT_OPUS_SAMPLE_RATE;
         int opusChannels = DEFAULT_OPUS_NUM_CHANNELS;
+        std::string cert_file = "";
+        std::string privkey_file = "";
         // additional fields will be added in the future
     };
 

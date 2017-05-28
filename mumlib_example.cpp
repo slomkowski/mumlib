@@ -39,8 +39,8 @@ int main(int argc, char *argv[]) {
     logger.setPriority(log4cpp::Priority::NOTICE);
     logger.addAppender(appender1);
 
-    if (argc < 3) {
-        logger.crit("Usage: %s {server} {password}", argv[0]);
+    if (argc < 3 || argc == 4 || argc > 5) {
+        logger.crit("Usage: %s {server} {password} [{certfile} {keyfile}]", argv[0]);
         return 1;
     }
 
@@ -50,6 +50,10 @@ int main(int argc, char *argv[]) {
         try {
             mumlib::MumlibConfiguration conf;
             conf.opusEncoderBitrate = 32000;
+            if ( argc > 3 && argc <= 5 ) {
+                conf.cert_file = argv[3];
+                conf.privkey_file = argv[4];
+            }
             mumlib::Mumlib mum(myCallback, conf);
             myCallback.mum = &mum;
             mum.connect(argv[1], 64738, "mumlib_example", argv[2]);
