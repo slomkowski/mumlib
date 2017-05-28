@@ -38,12 +38,20 @@ namespace mumlib {
             externalIoService = false;
         }
 
-        _Mumlib_Private(Callback &callback, io_service &ioService, MumlibConfiguration &configuration)
+        _Mumlib_Private(
+                Callback &callback,
+                io_service &ioService,
+                MumlibConfiguration &configuration)
                 : callback(callback),
                   ioService(ioService),
                   externalIoService(true),
-                  transport(ioService, boost::bind(&_Mumlib_Private::processIncomingTcpMessage, this, _1, _2, _3),
-                            boost::bind(&_Mumlib_Private::processAudioPacket, this, _1, _2, _3)) {
+                  transport(
+                          ioService,
+                          boost::bind(&_Mumlib_Private::processIncomingTcpMessage, this, _1, _2, _3),
+                          boost::bind(&_Mumlib_Private::processAudioPacket, this, _1, _2, _3),
+                          false,
+                          configuration.cert_file,
+                          configuration.privkey_file) {
 
             audio.setOpusEncoderBitrate(configuration.opusEncoderBitrate);
         }
@@ -347,7 +355,7 @@ namespace mumlib {
         impl = new _Mumlib_Private(callback, ioService, conf);
     }
 
-    Mumlib::Mumlib(Callback &callback, MumlibConfiguration &configuration)
+    Mumlib::Mumlib(Callback &callback, MumlibConfiguration &configuration) 
             : impl(new _Mumlib_Private(callback, configuration)) { }
 
     Mumlib::Mumlib(Callback &callback, io_service &ioService, MumlibConfiguration &configuration)

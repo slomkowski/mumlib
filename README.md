@@ -35,6 +35,8 @@ make
 Sample usage is covered in *mumlib_example.cpp* file. Basically, you should extend *mumlib::Callback* class
 to implement your own handlers.
 
+To use a client certificate, you'll need a PEM certificate and private key without a passphrase. These are assed in the MumlibConfig struct to the Mumlib object constructor. Support for passphrase still needs to be added.
+
 ## Credits
 
 2015 Michał Słomkowski. The code is published under the terms of Lesser General Public License Version 3.

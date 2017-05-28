@@ -22,6 +22,8 @@ namespace mumlib {
 
     struct MumlibConfiguration {
         int opusEncoderBitrate = DEFAULT_OPUS_ENCODER_BITRATE;
+        std::string cert_file = "";
+        std::string privkey_file = "";
         // additional fields will be added in the future
     };
 
