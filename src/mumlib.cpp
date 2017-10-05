@@ -1,16 +1,16 @@
-#include "mumlib/CryptState.hpp"
-#include "mumlib/VarInt.hpp"
-#include "mumlib/enums.hpp"
-#include "mumlib/Transport.hpp"
-#include "mumlib/Audio.hpp"
+#include "mumlib/include/mumlib/CryptState.hpp"
+#include "mumlib/include/mumlib/VarInt.hpp"
+#include "mumlib/include/mumlib/enums.hpp"
+#include "mumlib/include/mumlib/Transport.hpp"
+#include "mumlib/include/mumlib/Audio.hpp"
 
-#include "mumlib.hpp"
+#include "mumlib/include/mumlib.hpp"
 
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
 #include <log4cpp/Category.hh>
 
-#include <Mumble.pb.h>
+#include "Mumble.pb.h"
 
 using namespace std;
 using namespace boost::asio;
@@ -19,7 +19,9 @@ using namespace mumlib;
 
 namespace mumlib {
     struct _Mumlib_Private : boost::noncopyable {
-        log4cpp::Category &logger = log4cpp::Category::getInstance("mumlib.Mumlib");
+#ifdef MUMLIB_USE_LOG4CPP
+        MUMLIB_USE_LOG4CPP::Category &logger = MUMLIB_USE_LOG4CPP::Category::getInstance("mumlib.Mumlib");
+#endif
 
         bool externalIoService;
         io_service &ioService;
@@ -42,9 +44,13 @@ namespace mumlib {
                 : callback(callback),
                   ioService(ioService),
                   externalIoService(true),
-                  transport(ioService, boost::bind(&_Mumlib_Private::processIncomingTcpMessage, this, _1, _2, _3),
-                            boost::bind(&_Mumlib_Private::processAudioPacket, this, _1, _2, _3)) {
+                  transport(ioService,
+                            boost::bind(&_Mumlib_Private::processIncomingTcpMessage, this, _1, _2, _3),
+                            boost::bind(&_Mumlib_Private::processAudioPacket, this, _1, _2, _3),
+                            configuration)
+        {
 
+            transport.set_callback(&callback);
             audio.setOpusEncoderBitrate(configuration.opusEncoderBitrate);
         }
 
@@ -55,8 +61,12 @@ namespace mumlib {
         }
 
         bool processAudioPacket(AudioPacketType type, uint8_t *buffer, int length) {
+#ifdef MUMLIB_USE_LOG4CPP
             logger.info("Got %d B of encoded audio data.", length);
+#endif
+#ifdef MUMLIB_USE_EXCEPTIONS
             try {
+#endif
                 auto incomingAudioPacket = audio.decodeIncomingAudioPacket(buffer, length);
 
                 if (type == AudioPacketType::OPUS) {
@@ -72,17 +82,22 @@ namespace mumlib {
                                    pcmData,
                                    status.first);
                 } else {
+#ifdef MUMLIB_USE_LOG4CPP
                     logger.warn("Incoming audio packet doesn't contain Opus data, calling unsupportedAudio callback.");
+#endif
                     callback.unsupportedAudio(incomingAudioPacket.target,
                                               incomingAudioPacket.sessionId,
                                               incomingAudioPacket.sequenceNumber,
                                               incomingAudioPacket.audioPayload,
                                               incomingAudioPacket.audioPayloadLength);
                 }
-
+#ifdef MUMLIB_USE_EXCEPTIONS
             } catch (mumlib::AudioException &exp) {
+#ifdef MUMLIB_USE_LOG4CPP
                 logger.error("Audio decode error: %s.", exp.what());
+#endif
             }
+#endif
 
             return true;
         }
@@ -90,7 +105,9 @@ namespace mumlib {
     private:
 
         bool processIncomingTcpMessage(MessageType messageType, uint8_t *buffer, int length) {
+#ifdef MUMLIB_USE_LOG4CPP
             logger.debug("Process incoming message: type %d, length: %d.", messageType, length);
+#endif
 
             switch (messageType) {
                 case MessageType::VERSION: {
@@ -261,27 +278,43 @@ namespace mumlib {
                     callback.textMessage(actor, sessions, channel_ids, tree_ids, text_message.message());
                 }
                     break;
+
                 case MessageType::PERMISSIONDENIED: // 12
+#ifdef MUMLIB_USE_LOG4CPP
                     logger.warn("PermissionDenied Message: support not implemented yet");
+#endif
                     break;
                 case MessageType::ACL: // 13
+#ifdef MUMLIB_USE_LOG4CPP
                     logger.warn("ACL Message: support not implemented yet.");
+#endif
                     break;
                 case MessageType::QUERYUSERS: // 14
+#ifdef MUMLIB_USE_LOG4CPP
                     logger.warn("QueryUsers Message: support not implemented yet");
+#endif
                     break;
                 case MessageType::CONTEXTACTIONMODIFY: // 16
+#ifdef MUMLIB_USE_LOG4CPP
                     logger.warn("ContextActionModify Message: support not implemented yet");
+#endif
                     break;
                 case MessageType::CONTEXTACTION: // 17
+#ifdef MUMLIB_USE_LOG4CPP
                     logger.warn("ContextAction Message: support not implemented yet");
+#endif
                     break;
                 case MessageType::USERLIST: // 18
+#ifdef MUMLIB_USE_LOG4CPP
                     logger.warn("UserList Message: support not implemented yet");
+#endif
                     break;
                 case MessageType::VOICETARGET:
+#ifdef MUMLIB_USE_LOG4CPP
                     logger.warn("VoiceTarget Message: I don't think the server ever sends this structure.");
+#endif
                     break;
+
                 case MessageType::PERMISSIONQUERY: {
                     MumbleProto::PermissionQuery permissionQuery;
                     permissionQuery.ParseFromArray(buffer, length);
@@ -305,11 +338,16 @@ namespace mumlib {
                     callback.codecVersion(alpha, beta, prefer_alpha, opus);
                 }
                     break;
+
                 case MessageType::USERSTATS:
+#ifdef MUMLIB_USE_LOG4CPP
                     logger.warn("UserStats Message: support not implemented yet");
+#endif
                     break;
                 case MessageType::REQUESTBLOB: // 23
+#ifdef MUMLIB_USE_LOG4CPP
                     logger.warn("RequestBlob Message: I don't think this is sent by the server.");
+#endif
                     break;
                 case MessageType::SERVERCONFIG: {
                     MumbleProto::ServerConfig serverConfig;
@@ -325,11 +363,18 @@ namespace mumlib {
                                           image_message_length);
                 }
                     break;
+
                 case MessageType::SUGGESTCONFIG: // 25
-                    logger.warn("SuggestConfig Message: support not implemented yet");
+#ifdef MUMLIB_USE_LOG4CPP
+                logger.warn("SuggestConfig Message: support not implemented yet");
+#endif
                     break;
+
                 default:
+#ifdef MUMLIB_USE_EXCEPTIONS
                     throw MumlibException("unknown message type: " + to_string(static_cast<int>(messageType)));
+#endif
+                break;
             }
             return true;
         }
@@ -351,7 +396,9 @@ namespace mumlib {
             : impl(new _Mumlib_Private(callback, configuration)) { }
 
     Mumlib::Mumlib(Callback &callback, io_service &ioService, MumlibConfiguration &configuration)
-            : impl(new _Mumlib_Private(callback, ioService, configuration)) { }
+    {
+        impl = new _Mumlib_Private(callback, ioService, configuration);
+    }
 
     Mumlib::~Mumlib() {
         disconnect();
@@ -378,10 +425,12 @@ namespace mumlib {
 
     void Mumlib::run() {
         if (impl->externalIoService) {
+#ifdef MUMLIB_USE_EXCEPTIONS
             throw MumlibException("can't call run() when using external io_service");
+#endif
         }
-
-        impl->ioService.run();
+        else
+            impl->ioService.run();
     }
 
     void Mumlib::sendAudioData(int16_t *pcmData, int pcmLength) {

@@ -1,4 +1,4 @@
-#include "mumlib/VarInt.hpp"
+#include "mumlib/include/mumlib/VarInt.hpp"
 
 #include <boost/format.hpp>
 
@@ -22,11 +22,13 @@ int64_t mumlib::VarInt::parseVariant(uint8_t *buffer) {
         switch (v & 0xFC) {
             case 0xF0:
                 return buffer[1] << 24 | buffer[2] << 16 | buffer[3] << 8 | buffer[4];
+#ifdef MUMLIB_USE_EXCEPTIONS
             case 0xF4:
                 throw VarIntException("currently unsupported 8-byte varint size");
             case 0xF8:
             case 0xFC:
                 throw VarIntException("currently negative varints aren't supported");
+#endif
             default:
                 break;
         }
@@ -35,8 +37,9 @@ int64_t mumlib::VarInt::parseVariant(uint8_t *buffer) {
     } else if ((v & 0xE0) == 0xC0) {
         return (v & 0x1F) << 16 | buffer[1] << 8 | buffer[2];
     }
-
+#ifdef MUMLIB_USE_EXCEPTIONS
     throw VarIntException("invalid varint");
+#endif
 }
 
 std::vector<uint8_t> mumlib::VarInt::getEncoded() const {

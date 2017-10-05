@@ -1,25 +1,32 @@
-#include "mumlib/Audio.hpp"
+#include "mumlib/include/mumlib/Audio.hpp"
 
 #include <boost/format.hpp>
 
 static boost::posix_time::seconds RESET_SEQUENCE_NUMBER_INTERVAL(5);
-
 mumlib::Audio::Audio(int opusEncoderBitrate)
-        : logger(log4cpp::Category::getInstance("mumlib.Audio")),
+        :
+#ifdef MUMLIB_USE_LOG4CPP
+          logger(MUMLIB_USE_LOG4CPP::Category::getInstance("mumlib.Audio")),
+#endif
           opusDecoder(nullptr),
           opusEncoder(nullptr),
-          outgoingSequenceNumber(0) {
+          outgoingSequenceNumber(0)
+{
 
     int error;
 
     opusDecoder = opus_decoder_create(SAMPLE_RATE, 1, &error);
     if (error != OPUS_OK) {
+#ifdef MUMLIB_USE_EXCEPTIONS
         throw AudioException((boost::format("failed to initialize OPUS decoder: %s") % opus_strerror(error)).str());
+#endif
     }
 
     opusEncoder = opus_encoder_create(SAMPLE_RATE, 1, OPUS_APPLICATION_VOIP, &error);
     if (error != OPUS_OK) {
+#ifdef MUMLIB_USE_EXCEPTIONS
         throw AudioException((boost::format("failed to initialize OPUS encoder: %s") % opus_strerror(error)).str());
+#endif
     }
 
     opus_encoder_ctl(opusEncoder, OPUS_SET_VBR(0));
@@ -42,8 +49,10 @@ mumlib::Audio::~Audio() {
 void mumlib::Audio::setOpusEncoderBitrate(int bitrate) {
     int error = opus_encoder_ctl(opusEncoder, OPUS_SET_BITRATE(bitrate));
     if (error != OPUS_OK) {
+#ifdef MUMLIB_USE_EXCEPTIONS
         throw AudioException((boost::format("failed to initialize transmission bitrate to %d B/s: %s")
                               % bitrate % opus_strerror(error)).str());
+#endif
     }
 }
 
@@ -51,7 +60,9 @@ int mumlib::Audio::getOpusEncoderBitrate() {
     opus_int32 bitrate;
     int error = opus_encoder_ctl(opusEncoder, OPUS_GET_BITRATE(&bitrate));
     if (error != OPUS_OK) {
+#ifdef MUMLIB_USE_EXCEPTIONS
         throw AudioException((boost::format("failed to read Opus bitrate: %s") % opus_strerror(error)).str());
+#endif
     }
     return bitrate;
 }
@@ -71,8 +82,10 @@ std::pair<int, bool>  mumlib::Audio::decodeOpusPayload(uint8_t *inputBuffer,
     opusDataLength = opusDataLength & 0x1fff;
 
     if (inputLength < opusDataLength + dataPointer) {
+#ifdef MUMLIB_USE_EXCEPTIONS
         throw AudioException((boost::format("invalid Opus payload (%d B): header %d B, expected Opus data length %d B")
                               % inputLength % dataPointer % opusDataLength).str());
+#endif
     }
 
     int outputSize = opus_decode(opusDecoder,
@@ -83,12 +96,15 @@ std::pair<int, bool>  mumlib::Audio::decodeOpusPayload(uint8_t *inputBuffer,
                                  0);
 
     if (outputSize <= 0) {
+#ifdef MUMLIB_USE_EXCEPTIONS
         throw AudioException((boost::format("failed to decode %d B of OPUS data: %s") % inputLength %
                               opus_strerror(outputSize)).str());
+#endif
     }
-
+#ifdef MUMLIB_USE_LOG4CPP
     logger.debug("%d B of Opus data decoded to %d PCM samples, last packet: %d.",
                  opusDataLength, outputSize, lastPacket);
+#endif
 
     return std::make_pair(outputSize, lastPacket);
 }
@@ -102,7 +118,9 @@ int mumlib::Audio::encodeAudioPacket(int target, int16_t *inputPcmBuffer, int in
             system_clock::now() - lastEncodedAudioPacketTimestamp).count();
 
     if (lastAudioPacketSentInterval > RESET_SEQUENCE_NUMBER_INTERVAL.total_milliseconds() + 1000) {
+#ifdef MUMLIB_USE_LOG4CPP
         logger.debug("Last audio packet was sent %d ms ago, resetting encoder.", lastAudioPacketSentInterval);
+#endif
         resetEncoder();
     }
 
@@ -122,8 +140,10 @@ int mumlib::Audio::encodeAudioPacket(int target, int16_t *inputPcmBuffer, int in
     );
 
     if (outputSize <= 0) {
+#ifdef MUMLIB_USE_EXCEPTIONS
         throw AudioException((boost::format("failed to encode %d B of PCM data: %s") % inputLength %
                               opus_strerror(outputSize)).str());
+#endif
     }
 
     auto outputSizeEnc = VarInt(outputSize).getEncoded();
@@ -145,7 +165,9 @@ void mumlib::Audio::resetEncoder() {
     int status = opus_encoder_ctl(opusEncoder, OPUS_RESET_STATE, nullptr);
 
     if (status != OPUS_OK) {
+#ifdef MUMLIB_USE_EXCEPTIONS
         throw AudioException((boost::format("failed to reset encoder: %s") % opus_strerror(status)).str());
+#endif
     }
 
     outgoingSequenceNumber = 0;
@@ -170,10 +192,12 @@ mumlib::IncomingAudioPacket mumlib::Audio::decodeIncomingAudioPacket(uint8_t *in
     incomingAudioPacket.audioPayloadLength = inputBufferLength - dataPointer;
 
     if (dataPointer >= inputBufferLength) {
+#ifdef MUMLIB_USE_EXCEPTIONS
         throw AudioException((boost::format("invalid incoming audio packet (%d B): header %d B") % inputBufferLength %
                               dataPointer).str());
+#endif
     }
-
+#ifdef MUMLIB_USE_LOG4CPP
     logger.debug(
             "Received %d B of audio packet, %d B header, %d B payload (target: %d, sessionID: %ld, seq num: %ld).",
             inputBufferLength,
@@ -182,6 +206,7 @@ mumlib::IncomingAudioPacket mumlib::Audio::decodeIncomingAudioPacket(uint8_t *in
             incomingAudioPacket.target,
             incomingAudioPacket.sessionId,
             incomingAudioPacket.sequenceNumber);
+#endif
 
     return incomingAudioPacket;
 }

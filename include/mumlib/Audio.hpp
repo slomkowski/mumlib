@@ -1,21 +1,22 @@
 #pragma once
 
-#include "Transport.hpp"
+#include <mumlib/Transport.hpp>
 
-#include <opus.h>
+#include <opus/opus.h>
 
 #include <chrono>
 
 namespace mumlib {
 
     constexpr int SAMPLE_RATE = 48000;
-
+#ifdef MUMLIB_USE_EXCEPTIONS
     class MumlibException;
 
     class AudioException : public MumlibException {
     public:
         AudioException(string message) : MumlibException(message) { }
     };
+#endif
 
     struct IncomingAudioPacket {
         AudioPacketType type;
@@ -53,7 +54,9 @@ namespace mumlib {
         void resetEncoder();
 
     private:
-        log4cpp::Category &logger;
+#ifdef MUMLIB_USE_LOG4CPP
+        MUMLIB_USE_LOG4CPP::Category &logger;
+#endif
 
         OpusDecoder *opusDecoder;
         OpusEncoder *opusEncoder;
