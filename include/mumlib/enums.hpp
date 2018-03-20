@@ -45,4 +45,14 @@ namespace mumlib {
         OPUS
     };
 
+    enum class UserState {
+        MUTE,
+        DEAF,
+        SUPPRESS,
+        SELF_MUTE,
+        SELF_DEAF,
+        COMMENT,
+        PRIORITY_SPEAKER,
+        RECORDING
+    };
 }

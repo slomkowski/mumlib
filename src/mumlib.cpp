@@ -152,7 +152,7 @@ namespace mumlib {
                         links_remove.push_back(channelState.links_remove(i));
                     }
 
-                    this->channelId = channel_id;
+                    // this->channelId = channel_id;
 
                     callback.channelState(
                             channelState.name(),
@@ -369,7 +369,7 @@ namespace mumlib {
 
     void Mumlib::disconnect() {
         if (not impl->externalIoService) {
-            impl->ioService.reset();
+            impl->ioService.stop();
         }
         if (impl->transport.getConnectionState() != ConnectionState::NOT_CONNECTED) {
             impl->transport.disconnect();
@@ -390,6 +390,12 @@ namespace mumlib {
         impl->transport.sendEncodedAudioPacket(encodedData, length);
     }
 
+    void Mumlib::sendAudioDataTarget(int targetId, int16_t *pcmData, int pcmLength) {
+        uint8_t encodedData[5000];
+        int length = impl->audio.encodeAudioPacket(targetId, pcmData, pcmLength, encodedData, 5000);
+        impl->transport.sendEncodedAudioPacket(encodedData, length);
+    }
+
     void Mumlib::sendTextMessage(string message) {
         MumbleProto::TextMessage textMessage;
         textMessage.set_actor(impl->sessionId);
@@ -403,5 +409,64 @@ namespace mumlib {
         userState.set_channel_id(channelId);
         impl->transport.sendControlMessage(MessageType::USERSTATE, userState);
         impl->channelId = channelId;
+    }
+
+    void Mumlib::sendVoiceTarget(int targetId, int channelId) {
+        MumbleProto::VoiceTarget voiceTarget;
+        MumbleProto::VoiceTarget_Target voiceTargetTarget;
+        voiceTargetTarget.set_channel_id(channelId);
+        voiceTargetTarget.set_children(true);        
+        voiceTarget.set_id(targetId);
+        voiceTarget.add_targets()->CopyFrom(voiceTargetTarget);
+        impl->transport.sendControlMessage(MessageType::VOICETARGET, voiceTarget);
+    }
+
+    void Mumlib::sendUserState(mumlib::UserState field, bool val) {
+        MumbleProto::UserState userState;
+
+        switch (field) {
+            case UserState::MUTE:
+                userState.set_mute(val);
+                break;
+            case UserState::DEAF:
+                userState.set_deaf(val);
+                break;
+            case UserState::SUPPRESS:
+                userState.set_suppress(val);
+                break;
+            case UserState::SELF_MUTE:
+                userState.set_self_mute(val);
+                break;
+            case UserState::SELF_DEAF:
+                userState.set_self_deaf(val);
+                break;
+            case UserState::PRIORITY_SPEAKER:
+                userState.set_priority_speaker(val);
+                break;
+            case UserState::RECORDING:
+                userState.set_recording(val);
+                break;
+            default:
+                // in any other case, just ignore the command
+                return;
+        }
+
+        impl->transport.sendControlMessage(MessageType::USERSTATE, userState);
+    }
+
+    void Mumlib::sendUserState(mumlib::UserState field, std::string val) {
+        MumbleProto::UserState userState;
+
+        switch (field) {
+            case UserState::COMMENT:
+                // TODO: if comment longer than 128 bytes, we need to set the SHA1 hash
+                userState.set_comment(val);
+                break;
+            default:
+                // in any other case, just ignore the command
+                return;
+        }
+
+        impl->transport.sendControlMessage(MessageType::USERSTATE, userState);
     }
 }

@@ -181,7 +181,8 @@ bool mumlib::CryptState::decrypt(const unsigned char *source, unsigned char *dst
 #define SHIFTBITS 63
 typedef uint64_t subblock;
 
-#define SWAP64(x) ({register uint64_t __out, __in = (x); __asm__("bswap %q0" : "=r"(__out) : "0"(__in)); __out;})
+// #define SWAP64(x) ({register uint64_t __out, __in = (x); __asm__("bswap %q0" : "=r"(__out) : "0"(__in)); __out;})
+#define SWAP64(x) (__builtin_bswap64(x))
 #define SWAPPED(x) SWAP64(x)
 
 typedef subblock keyblock[BLOCKSIZE];

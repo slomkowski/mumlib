@@ -32,3 +32,6 @@ build/
 # IntelliJ
 *.iml
 .idea/
+
+# Boost
+include/boost/

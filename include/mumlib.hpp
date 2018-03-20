@@ -50,9 +50,17 @@ namespace mumlib {
 
         void sendAudioData(int16_t *pcmData, int pcmLength);
 
+        void sendAudioDataTarget(int targetId, int16_t *pcmData, int pcmLength);
+
         void sendTextMessage(std::string message);
 
         void joinChannel(int channelId);
+
+        void sendVoiceTarget(int targetId, int channelId);
+
+        void sendUserState(mumlib::UserState state, bool val);
+
+        void sendUserState(mumlib::UserState state, std::string value);
 
     private:
         _Mumlib_Private *impl;
