@@ -29,6 +29,6 @@ namespace mumlib {
     private:
         const int64_t value;
 
-        int64_t parseVariant(uint8_t *buffer);
+        long parseVariant(const uint8_t *buffer);
     };
 }

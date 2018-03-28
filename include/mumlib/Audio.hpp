@@ -2,19 +2,17 @@
 
 #include "Transport.hpp"
 
-#include <opus.h>
+#include <opus/opus.h>
 
 #include <chrono>
 
 namespace mumlib {
 
-    constexpr int SAMPLE_RATE = 48000;
-
     class MumlibException;
 
     class AudioException : public MumlibException {
     public:
-        AudioException(string message) : MumlibException(message) { }
+        explicit AudioException(string message) : MumlibException(message) { }
     };
 
     struct IncomingAudioPacket {
@@ -27,8 +25,8 @@ namespace mumlib {
     };
 
     class Audio : boost::noncopyable {
-    public:
-        Audio(int opusEncoderBitrate = DEFAULT_OPUS_ENCODER_BITRATE);
+    public:        
+        Audio(int opusSampleRate, int opusEncoderBitrate);
 
         virtual ~Audio();
 
@@ -59,6 +57,7 @@ namespace mumlib {
         OpusEncoder *opusEncoder;
 
         int64_t outgoingSequenceNumber;
+        int sampleRate;
 
         std::chrono::time_point<std::chrono::system_clock> lastEncodedAudioPacketTimestamp;
     };

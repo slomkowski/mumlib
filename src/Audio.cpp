@@ -4,20 +4,21 @@
 
 static boost::posix_time::seconds RESET_SEQUENCE_NUMBER_INTERVAL(5);
 
-mumlib::Audio::Audio(int opusEncoderBitrate)
+mumlib::Audio::Audio(int opusSampleRate, int opusEncoderBitrate)
         : logger(log4cpp::Category::getInstance("mumlib.Audio")),
           opusDecoder(nullptr),
           opusEncoder(nullptr),
           outgoingSequenceNumber(0) {
 
     int error;
+    this->sampleRate = opusSampleRate;
 
-    opusDecoder = opus_decoder_create(SAMPLE_RATE, 1, &error);
+    opusDecoder = opus_decoder_create(opusSampleRate, 1, &error);
     if (error != OPUS_OK) {
         throw AudioException((boost::format("failed to initialize OPUS decoder: %s") % opus_strerror(error)).str());
     }
 
-    opusEncoder = opus_encoder_create(SAMPLE_RATE, 1, OPUS_APPLICATION_VOIP, &error);
+    opusEncoder = opus_encoder_create(opusSampleRate, 1, OPUS_APPLICATION_VOIP, &error);
     if (error != OPUS_OK) {
         throw AudioException((boost::format("failed to initialize OPUS encoder: %s") % opus_strerror(error)).str());
     }
@@ -108,7 +109,7 @@ int mumlib::Audio::encodeAudioPacket(int target, int16_t *inputPcmBuffer, int in
 
     std::vector<uint8_t> header;
 
-    header.push_back(0x80 | target);
+    header.push_back(static_cast<unsigned char &&>(0x80 | target));
 
     auto sequenceNumberEnc = VarInt(outgoingSequenceNumber).getEncoded();
     header.insert(header.end(), sequenceNumberEnc.begin(), sequenceNumberEnc.end());
@@ -130,15 +131,15 @@ int mumlib::Audio::encodeAudioPacket(int target, int16_t *inputPcmBuffer, int in
     header.insert(header.end(), outputSizeEnc.begin(), outputSizeEnc.end());
 
     memcpy(outputBuffer, &header[0], header.size());
-    memcpy(outputBuffer + header.size(), tmpOpusBuffer, outputSize);
+    memcpy(outputBuffer + header.size(), tmpOpusBuffer, (size_t) outputSize);
 
-    int incrementNumber = 100 * inputLength / SAMPLE_RATE;
+    int incrementNumber = 100 * inputLength / this->sampleRate;
 
     outgoingSequenceNumber += incrementNumber;
 
     lastEncodedAudioPacketTimestamp = std::chrono::system_clock::now();
 
-    return outputSize + header.size();
+    return static_cast<int>(outputSize + header.size());
 }
 
 void mumlib::Audio::resetEncoder() {
@@ -152,7 +153,7 @@ void mumlib::Audio::resetEncoder() {
 }
 
 mumlib::IncomingAudioPacket mumlib::Audio::decodeIncomingAudioPacket(uint8_t *inputBuffer, int inputBufferLength) {
-    mumlib::IncomingAudioPacket incomingAudioPacket;
+    mumlib::IncomingAudioPacket incomingAudioPacket{};
 
     incomingAudioPacket.type = static_cast<AudioPacketType >((inputBuffer[0] & 0xE0) >> 5);
     incomingAudioPacket.target = inputBuffer[0] & 0x1F;

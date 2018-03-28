@@ -3,6 +3,7 @@
 #include "Mumble.pb.h"
 
 #include <boost/format.hpp>
+#include <utility>
 
 using namespace std;
 
@@ -32,15 +33,15 @@ mumlib::Transport::Transport(
         bool noUdp) :
         logger(log4cpp::Category::getInstance("mumlib.Transport")),
         ioService(ioService),
-        processMessageFunction(processMessageFunc),
-        processEncodedAudioPacketFunction(processEncodedAudioPacketFunction),
+        processMessageFunction(std::move(processMessageFunc)),
+        processEncodedAudioPacketFunction(std::move(processEncodedAudioPacketFunction)),
         noUdp(noUdp),
         state(ConnectionState::NOT_CONNECTED),
         udpSocket(ioService),
         sslContext(ssl::context::sslv23),
         sslSocket(ioService, sslContext),
         pingTimer(ioService, PING_INTERVAL),
-        asyncBufferPool(max(MAX_UDP_LENGTH, MAX_TCP_LENGTH)) {
+        asyncBufferPool(static_cast<const unsigned long>(max(MAX_UDP_LENGTH, MAX_TCP_LENGTH))) {
 
     sslIncomingBuffer = new uint8_t[MAX_TCP_LENGTH];
 
@@ -118,6 +119,15 @@ void mumlib::Transport::disconnect() {
     }
 }
 
+void mumlib::Transport::reconnect() {
+    boost::system::error_code errorCode;
+
+    udpSocket.close(errorCode);
+    if (errorCode) {
+        logger.warn("SSL socket close return an error: %s.", errorCode.message().c_str());
+    }
+}
+
 
 void mumlib::Transport::sendVersion() {
     MumbleProto::Version version;
@@ -185,10 +195,10 @@ void mumlib::Transport::doReceiveUdp() {
                         }
 
                         uint8_t plainBuffer[1024];
-                        const int plainBufferLength = bytesTransferred - 4;
+                        const int plainBufferLength = static_cast<const int>(bytesTransferred - 4);
 
                         bool success = cryptState.decrypt(
-                                udpIncomingBuffer, plainBuffer, bytesTransferred);
+                                udpIncomingBuffer, plainBuffer, static_cast<unsigned int>(bytesTransferred));
 
                         if (not success) {
                             throwTransportException("UDP packet decryption failed");
@@ -263,12 +273,12 @@ void mumlib::Transport::sendUdpAsync(uint8_t *buff, int length) {
     auto *encryptedMsgBuff = asyncBufferPool.malloc();
     const int encryptedMsgLength = length + 4;
 
-    cryptState.encrypt(buff, reinterpret_cast<uint8_t *>(encryptedMsgBuff), length);
+    cryptState.encrypt(buff, reinterpret_cast<uint8_t *>(encryptedMsgBuff), static_cast<unsigned int>(length));
 
     logger.debug("Sending %d B of data UDP asynchronously.", encryptedMsgLength);
 
     udpSocket.async_send_to(
-            boost::asio::buffer(encryptedMsgBuff, length + 4),
+            boost::asio::buffer(encryptedMsgBuff, static_cast<size_t>(length + 4)),
             udpReceiverEndpoint,
             [this, encryptedMsgBuff](const boost::system::error_code &ec, size_t bytesTransferred) {
                 asyncBufferPool.free(encryptedMsgBuff);
@@ -318,7 +328,7 @@ void mumlib::Transport::doReceiveSsl() {
                     processMessageInternal(
                             static_cast<MessageType>(messageType),
                             &sslIncomingBuffer[6],
-                            bytesTransferred - 6);
+                            static_cast<int>(bytesTransferred - 6));
 
                     doReceiveSsl();
                 } else {
@@ -438,10 +448,10 @@ void mumlib::Transport::sendUdpPing() {
     vector<uint8_t> message;
     message.push_back(0x20);
 
-    auto timestampVarint = VarInt(time(nullptr)).getEncoded();
+    auto timestampVarint = VarInt(static_cast<int64_t>(time(nullptr))).getEncoded();
     message.insert(message.end(), timestampVarint.begin(), timestampVarint.end());
 
-    sendUdpAsync(&message[0], message.size());
+    sendUdpAsync(&message[0], static_cast<int>(message.size()));
 }
 
 void mumlib::Transport::sendSsl(uint8_t *buff, int length) {
@@ -453,7 +463,7 @@ void mumlib::Transport::sendSsl(uint8_t *buff, int length) {
     logger.debug("Sending %d bytes of data.", length);
 
     try {
-        write(sslSocket, boost::asio::buffer(buff, length));
+        write(sslSocket, boost::asio::buffer(buff, static_cast<size_t>(length)));
     } catch (boost::system::system_error &err) {
         throwTransportException(std::string("SSL send failed: ") + err.what());
     }
@@ -467,13 +477,13 @@ void mumlib::Transport::sendSslAsync(uint8_t *buff, int length) {
 
     auto *asyncBuff = asyncBufferPool.malloc();
 
-    memcpy(asyncBuff, buff, length);
+    memcpy(asyncBuff, buff, static_cast<size_t>(length));
 
     logger.debug("Sending %d B of data asynchronously.", length);
 
     async_write(
             sslSocket,
-            boost::asio::buffer(asyncBuff, length),
+            boost::asio::buffer(asyncBuff, static_cast<size_t>(length)),
             [this, asyncBuff](const boost::system::error_code &ec, size_t bytesTransferred) {
                 asyncBufferPool.free(asyncBuff);
                 logger.debug("Sent %d B.", bytesTransferred);
@@ -499,7 +509,7 @@ void mumlib::Transport::sendControlMessagePrivate(MessageType type, google::prot
     const uint16_t type_network = htons(static_cast<uint16_t>(type));
 
     const int size = message.ByteSize();
-    const uint32_t size_network = htonl(size);
+    const uint32_t size_network = htonl((uint32_t) size);
 
     const int length = sizeof(type_network) + sizeof(size_network) + size;
 
@@ -517,7 +527,7 @@ void mumlib::Transport::sendControlMessagePrivate(MessageType type, google::prot
 void mumlib::Transport::throwTransportException(string message) {
     state = ConnectionState::FAILED;
 
-    throw TransportException(message);
+    throw TransportException(std::move(message));
 }
 
 void mumlib::Transport::sendEncodedAudioPacket(uint8_t *buffer, int length) {
@@ -534,7 +544,7 @@ void mumlib::Transport::sendEncodedAudioPacket(uint8_t *buffer, int length) {
 
         const uint16_t netUdptunnelType = htons(static_cast<uint16_t>(MessageType::UDPTUNNEL));
 
-        const uint32_t netLength = htonl(length);
+        const uint32_t netLength = htonl(static_cast<uint32_t>(length));
 
         const int packet = sizeof(netUdptunnelType) + sizeof(netLength) + length;
 
@@ -542,14 +552,14 @@ void mumlib::Transport::sendEncodedAudioPacket(uint8_t *buffer, int length) {
 
         memcpy(packetBuff, &netUdptunnelType, sizeof(netUdptunnelType));
         memcpy(packetBuff + sizeof(netUdptunnelType), &netLength, sizeof(netLength));
-        memcpy(packetBuff + sizeof(netUdptunnelType) + sizeof(netLength), buffer, length);
+        memcpy(packetBuff + sizeof(netUdptunnelType) + sizeof(netLength), buffer, static_cast<size_t>(length));
 
         sendSslAsync(packetBuff, length + sizeof(netUdptunnelType) + sizeof(netLength));
     }
 }
 
 void mumlib::Transport::processAudioPacket(uint8_t *buff, int length) {
-    AudioPacketType type = static_cast<AudioPacketType >((buff[0] & 0xE0) >> 5);
+    auto type = static_cast<AudioPacketType >((buff[0] & 0xE0) >> 5);
     switch (type) {
         case AudioPacketType::CELT_Alpha:
         case AudioPacketType::Speex:

@@ -43,7 +43,8 @@ namespace mumlib {
                   ioService(ioService),
                   externalIoService(true),
                   transport(ioService, boost::bind(&_Mumlib_Private::processIncomingTcpMessage, this, _1, _2, _3),
-                            boost::bind(&_Mumlib_Private::processAudioPacket, this, _1, _2, _3)) {
+                            boost::bind(&_Mumlib_Private::processAudioPacket, this, _1, _2, _3)),
+                  audio(configuration.opusSampleRate, configuration.opusEncoderBitrate) {
 
             audio.setOpusEncoderBitrate(configuration.opusEncoderBitrate);
         }
@@ -363,6 +364,10 @@ namespace mumlib {
         return impl->transport.getConnectionState();
     }
 
+    int Mumlib::getChannelId() {
+        return impl->channelId;
+    }
+
     void Mumlib::connect(string host, int port, string user, string password) {
         impl->transport.connect(host, port, user, password);
     }
@@ -370,6 +375,15 @@ namespace mumlib {
     void Mumlib::disconnect() {
         if (not impl->externalIoService) {
             impl->ioService.stop();
+        }
+        if (impl->transport.getConnectionState() != ConnectionState::NOT_CONNECTED) {
+            impl->transport.disconnect();
+        }
+    }
+
+    void Mumlib::reconnect() {
+        if (not impl->externalIoService) {
+            impl->ioService.reset();
         }
         if (impl->transport.getConnectionState() != ConnectionState::NOT_CONNECTED) {
             impl->transport.disconnect();

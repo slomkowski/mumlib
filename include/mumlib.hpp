@@ -11,6 +11,7 @@
 namespace mumlib {
 
     constexpr int DEFAULT_OPUS_ENCODER_BITRATE = 16000;
+    constexpr int DEFAULT_OPUS_SAMPLE_RATE = 48000;
 
     using namespace std;
     using namespace boost::asio;
@@ -22,6 +23,7 @@ namespace mumlib {
 
     struct MumlibConfiguration {
         int opusEncoderBitrate = DEFAULT_OPUS_ENCODER_BITRATE;
+        int opusSampleRate = DEFAULT_OPUS_SAMPLE_RATE;
         // additional fields will be added in the future
     };
 
@@ -30,7 +32,7 @@ namespace mumlib {
 
     class Mumlib : boost::noncopyable {
     public:
-        Mumlib(Callback &callback);
+        explicit Mumlib(Callback &callback);
 
         Mumlib(Callback &callback, io_service &ioService);
 
@@ -44,9 +46,13 @@ namespace mumlib {
 
         void disconnect();
 
+        void reconnect();
+
         void run();
 
         ConnectionState getConnectionState();
+
+        int getChannelId();
 
         void sendAudioData(int16_t *pcmData, int pcmLength);
 
