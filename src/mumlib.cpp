@@ -44,7 +44,7 @@ namespace mumlib {
                   externalIoService(true),
                   transport(ioService, boost::bind(&_Mumlib_Private::processIncomingTcpMessage, this, _1, _2, _3),
                             boost::bind(&_Mumlib_Private::processAudioPacket, this, _1, _2, _3)),
-                  audio(configuration.opusSampleRate, configuration.opusEncoderBitrate) {
+                  audio(configuration.opusSampleRate, configuration.opusEncoderBitrate, configuration.opusChannels) {
 
             audio.setOpusEncoderBitrate(configuration.opusEncoderBitrate);
         }

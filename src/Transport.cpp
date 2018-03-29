@@ -95,6 +95,7 @@ void mumlib::Transport::connect(
 
 void mumlib::Transport::disconnect() {
 
+    pingTimer.cancel();
     if (state != ConnectionState::NOT_CONNECTED) {
         boost::system::error_code errorCode;
 

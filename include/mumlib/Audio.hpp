@@ -25,8 +25,10 @@ namespace mumlib {
     };
 
     class Audio : boost::noncopyable {
-    public:        
-        Audio(int opusSampleRate, int opusEncoderBitrate);
+    public:
+        explicit Audio(int opusSampleRate=DEFAULT_OPUS_SAMPLE_RATE,
+                       int opusEncoderBitrate=DEFAULT_OPUS_ENCODER_BITRATE,
+                       int channels=DEFAULT_OPUS_NUM_CHANNELS);
 
         virtual ~Audio();
 

@@ -4,7 +4,7 @@
 
 static boost::posix_time::seconds RESET_SEQUENCE_NUMBER_INTERVAL(5);
 
-mumlib::Audio::Audio(int opusSampleRate, int opusEncoderBitrate)
+mumlib::Audio::Audio(int opusSampleRate, int opusEncoderBitrate, int channels)
         : logger(log4cpp::Category::getInstance("mumlib.Audio")),
           opusDecoder(nullptr),
           opusEncoder(nullptr),
@@ -13,12 +13,12 @@ mumlib::Audio::Audio(int opusSampleRate, int opusEncoderBitrate)
     int error;
     this->sampleRate = opusSampleRate;
 
-    opusDecoder = opus_decoder_create(opusSampleRate, 1, &error);
+    opusDecoder = opus_decoder_create(opusSampleRate, channels, &error);
     if (error != OPUS_OK) {
         throw AudioException((boost::format("failed to initialize OPUS decoder: %s") % opus_strerror(error)).str());
     }
 
-    opusEncoder = opus_encoder_create(opusSampleRate, 1, OPUS_APPLICATION_VOIP, &error);
+    opusEncoder = opus_encoder_create(opusSampleRate, channels, OPUS_APPLICATION_VOIP, &error);
     if (error != OPUS_OK) {
         throw AudioException((boost::format("failed to initialize OPUS encoder: %s") % opus_strerror(error)).str());
     }
