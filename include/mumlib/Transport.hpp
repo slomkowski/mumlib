@@ -50,8 +50,6 @@ namespace mumlib {
 
         void disconnect();
 
-        void reconnect();
-
         ConnectionState getConnectionState() {
             return state;
         }

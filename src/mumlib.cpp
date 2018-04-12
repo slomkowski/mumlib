@@ -8,6 +8,7 @@
 
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
+#include <boost/uuid/sha1.hpp>
 #include <log4cpp/Category.hh>
 
 #include <Mumble.pb.h>
@@ -201,6 +202,9 @@ namespace mumlib {
                     int32_t priority_speaker = userState.has_priority_speaker() ? userState.priority_speaker() : -1;
                     int32_t recording = userState.has_recording() ? userState.recording() : -1;
 
+                    if(session == this->sessionId) {
+                        this->channelId = channel_id;
+                    }
                     callback.userState(session,
                                        actor,
                                        userState.name(),
@@ -381,15 +385,6 @@ namespace mumlib {
         }
     }
 
-    void Mumlib::reconnect() {
-        if (not impl->externalIoService) {
-            impl->ioService.reset();
-        }
-        if (impl->transport.getConnectionState() != ConnectionState::NOT_CONNECTED) {
-            impl->transport.disconnect();
-        }
-    }
-
     void Mumlib::run() {
         if (impl->externalIoService) {
             throw MumlibException("can't call run() when using external io_service");
@@ -473,8 +468,23 @@ namespace mumlib {
 
         switch (field) {
             case UserState::COMMENT:
-                // TODO: if comment longer than 128 bytes, we need to set the SHA1 hash
-                userState.set_comment(val);
+                
+                if(val.size() < 128) {
+                    userState.set_comment(val);
+                } else {
+                    // if comment longer than 128 bytes, we need to set the SHA1 hash
+                    boost::uuids::detail::sha1 sha1;
+                    uint hash[5];
+                    sha1.process_bytes(val.c_str(), val.size());
+                    sha1.get_digest(hash);
+
+                    std::stringstream valStream;
+                    for(std::size_t i=0; i<sizeof(hash)/sizeof(hash[0]); ++i) {
+                        valStream << std::hex << hash[i];
+                    }
+                    userState.set_comment_hash(valStream.str());
+                }
+                
                 break;
             default:
                 // in any other case, just ignore the command

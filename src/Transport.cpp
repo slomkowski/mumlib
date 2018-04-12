@@ -95,7 +95,6 @@ void mumlib::Transport::connect(
 
 void mumlib::Transport::disconnect() {
 
-    pingTimer.cancel();
     if (state != ConnectionState::NOT_CONNECTED) {
         boost::system::error_code errorCode;
 
@@ -119,16 +118,6 @@ void mumlib::Transport::disconnect() {
         state = ConnectionState::NOT_CONNECTED;
     }
 }
-
-void mumlib::Transport::reconnect() {
-    boost::system::error_code errorCode;
-
-    udpSocket.close(errorCode);
-    if (errorCode) {
-        logger.warn("SSL socket close return an error: %s.", errorCode.message().c_str());
-    }
-}
-
 
 void mumlib::Transport::sendVersion() {
     MumbleProto::Version version;
