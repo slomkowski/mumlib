@@ -3,7 +3,6 @@
 #include "Mumble.pb.h"
 
 #include <boost/format.hpp>
-#include <utility>
 
 using namespace std;
 

@@ -29,6 +29,17 @@ namespace mumlib {
         // additional fields will be added in the future
     };
 
+    struct MumbleUser {
+        int32_t sessionId;
+        string name;
+    };
+
+    struct MumbleChannel {
+        int32_t channelId;
+        string name;
+        string description;
+    };
+
     struct _Mumlib_Private;
 
 
@@ -54,6 +65,10 @@ namespace mumlib {
 
         int getChannelId();
 
+        vector<MumbleUser> getListUser();
+
+        vector<MumbleChannel> getListChannel();
+
         void sendAudioData(int16_t *pcmData, int pcmLength);
 
         void sendAudioDataTarget(int targetId, int16_t *pcmData, int pcmLength);
@@ -62,13 +77,19 @@ namespace mumlib {
 
         void joinChannel(int channelId);
 
+        void joinChannel(std::string channelName);
+
         void sendVoiceTarget(int targetId, int channelId);
+
+        void sendVoiceTarget(int targetId, std::string channelName);
 
         void sendUserState(mumlib::UserState state, bool val);
 
         void sendUserState(mumlib::UserState state, std::string value);
-
+        
     private:
         _Mumlib_Private *impl;
+
+        int getListChannelIdBy(std::string channelName);
     };
 }

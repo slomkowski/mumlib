@@ -34,6 +34,9 @@ namespace mumlib {
         int sessionId = 0;
         int channelId = 0;
 
+        std::vector<MumbleUser> listMumbleUser;
+        std::vector<MumbleChannel> listMumbleChannel;
+
         _Mumlib_Private(Callback &callback, MumlibConfiguration &configuration)
                 : _Mumlib_Private(callback, *(new io_service()), configuration) {
             externalIoService = false;
@@ -154,7 +157,14 @@ namespace mumlib {
                         links_remove.push_back(channelState.links_remove(i));
                     }
 
-                    // this->channelId = channel_id;
+                    MumbleChannel mumbleChannel;
+                    mumbleChannel.channelId = channel_id;
+                    mumbleChannel.name = channelState.name();
+                    mumbleChannel.description = channelState.description();
+
+                    if(not isListChannelContains(channel_id)) {
+                        listMumbleChannel.push_back(mumbleChannel);
+                    } 
 
                     callback.channelState(
                             channelState.name(),
@@ -176,6 +186,10 @@ namespace mumlib {
                     int32_t actor = user_remove.has_actor() ? user_remove.actor() : -1;
                     bool ban = user_remove.has_ban() ? user_remove.ban()
                                                      : false; //todo make sure it's correct to assume it's false
+
+                    if(isListUserContains(user_remove.session())) {
+                        listUserRemovedBy(user_remove.session());
+                    }
 
                     callback.userRemove(
                             user_remove.session(),
@@ -205,6 +219,15 @@ namespace mumlib {
                     if(session == this->sessionId) {
                         this->channelId = channel_id;
                     }
+
+                    MumbleUser mumbleUser;
+                    mumbleUser.name = userState.name();
+                    mumbleUser.sessionId = session;
+
+                    if(not isListUserContains(session)) {
+                        listMumbleUser.push_back(mumbleUser);
+                    }
+
                     callback.userState(session,
                                        actor,
                                        userState.name(),
@@ -339,7 +362,25 @@ namespace mumlib {
             return true;
         }
 
+        bool isListUserContains(int sessionId) {
+            for(int i = 0; i < listMumbleUser.size(); i++)
+                if(listMumbleUser[i].sessionId == sessionId) 
+                    return true;
+            return false;
+        }
 
+        void listUserRemovedBy(int sessionId) {
+            for(int i = 0; i < listMumbleUser.size(); i++) 
+                if(listMumbleUser[i].sessionId == sessionId)
+                    listMumbleUser.erase(listMumbleUser.begin() + i);
+        }
+
+        bool isListChannelContains(int channelId) {
+            for(int i = 0; i < listMumbleChannel.size(); i++)
+                if(listMumbleChannel[i].channelId == channelId)
+                    return true;
+            return false;
+        }
     };
 
     Mumlib::Mumlib(Callback &callback) {
@@ -372,6 +413,14 @@ namespace mumlib {
         return impl->channelId;
     }
 
+    vector<mumlib::MumbleUser> Mumlib::getListUser() {
+        return impl->listMumbleUser;
+    }
+
+    vector<mumlib::MumbleChannel> Mumlib::getListChannel() {
+        return impl->listMumbleChannel;
+    }
+
     void Mumlib::connect(string host, int port, string user, string password) {
         impl->transport.connect(host, port, user, password);
     }
@@ -394,9 +443,7 @@ namespace mumlib {
     }
 
     void Mumlib::sendAudioData(int16_t *pcmData, int pcmLength) {
-        uint8_t encodedData[5000];
-        int length = impl->audio.encodeAudioPacket(0, pcmData, pcmLength, encodedData, 5000);
-        impl->transport.sendEncodedAudioPacket(encodedData, length);
+        Mumlib::sendAudioDataTarget(0, pcmData, pcmLength);
     }
 
     void Mumlib::sendAudioDataTarget(int targetId, int16_t *pcmData, int pcmLength) {
@@ -420,6 +467,11 @@ namespace mumlib {
         impl->channelId = channelId;
     }
 
+    void Mumlib::joinChannel(string name) {
+        int channelId = Mumlib::getListChannelIdBy(name);
+        Mumlib::joinChannel(channelId);
+    }
+
     void Mumlib::sendVoiceTarget(int targetId, int channelId) {
         MumbleProto::VoiceTarget voiceTarget;
         MumbleProto::VoiceTarget_Target voiceTargetTarget;
@@ -428,6 +480,11 @@ namespace mumlib {
         voiceTarget.set_id(targetId);
         voiceTarget.add_targets()->CopyFrom(voiceTargetTarget);
         impl->transport.sendControlMessage(MessageType::VOICETARGET, voiceTarget);
+    }
+
+    void Mumlib::sendVoiceTarget(int targetId, string channelName) {
+        int channelId = Mumlib::getListChannelIdBy(channelName);
+        Mumlib::sendVoiceTarget(targetId, channelId);
     }
 
     void Mumlib::sendUserState(mumlib::UserState field, bool val) {
@@ -492,5 +549,14 @@ namespace mumlib {
         }
 
         impl->transport.sendControlMessage(MessageType::USERSTATE, userState);
+    }
+
+    int Mumlib::getListChannelIdBy(string name) {
+        vector<mumlib::MumbleChannel> listMumbleChannel = impl->listMumbleChannel;
+        int channelId = impl->channelId;
+        for(int i = 0; i < listMumbleChannel.size(); i++)
+            if(listMumbleChannel[i].name == name)
+                channelId = listMumbleChannel[i].channelId;
+        return channelId;
     }
 }
