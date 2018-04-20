@@ -191,33 +191,12 @@ bool mumlib::CryptState::decrypt(const unsigned char *source, unsigned char *dst
     return true;
 }
 
-#if defined(__LP64__)
-
 #define BLOCKSIZE 2
 #define SHIFTBITS 63
 typedef uint64_t subblock;
 
-#ifdef __x86_64__
-static inline uint64_t SWAP64(register uint64_t __in) { register uint64_t __out; __asm__("bswap %q0" : "=r"(__out) : "0"(__in)); return __out; }
-#else
-#define SWAP64(x) ((static_cast<uint64_t>(x) << 56) | \
-					((static_cast<uint64_t>(x) << 40) & 0xff000000000000ULL) | \
-					((static_cast<uint64_t>(x) << 24) & 0xff0000000000ULL) | \
-					((static_cast<uint64_t>(x) << 8)  & 0xff00000000ULL) | \
-					((static_cast<uint64_t>(x) >> 8)  & 0xff000000ULL) | \
-					((static_cast<uint64_t>(x) >> 24) & 0xff0000ULL) | \
-					((static_cast<uint64_t>(x) >> 40) & 0xff00ULL) | \
-					((static_cast<uint64_t>(x)  >> 56)))
-#endif
-// #define SWAP64(x) (__builtin_bswap64(x))
+#define SWAP64(x) (__builtin_bswap64(x))
 #define SWAPPED(x) SWAP64(x)
-
-#else
-#define BLOCKSIZE 4
-#define SHIFTBITS 31
-typedef uint32_t subblock;
-#define SWAPPED(x) htonl(x)
-#endif
 
 typedef subblock keyblock[BLOCKSIZE];
 

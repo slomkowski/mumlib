@@ -76,6 +76,16 @@ std::pair<int, bool>  mumlib::Audio::decodeOpusPayload(uint8_t *inputBuffer,
                               % inputLength % dataPointer % opusDataLength).str());
     }
 
+    // Issue #3 (Users speaking simultaneously)
+    // https://mf4.xiph.org/jenkins/view/opus/job/opus/ws/doc/html/group__opus__decoder.html
+    // Opus is a stateful codec with overlapping blocks and as a result Opus packets are not coded independently of each other. 
+    // Packets must be passed into the decoder serially and in the correct order for a correct decode. 
+    // Lost packets can be replaced with loss concealment by calling the decoder with a null pointer and zero length for the missing packet.
+    // A single codec state may only be accessed from a single thread at a time and any required locking must be performed by the caller. 
+    // Separate streams must be decoded with separate decoder states and can be decoded in parallel unless the library was compiled with NONTHREADSAFE_PSEUDOSTACK defined.
+
+    int frame = opus_packet_get_nb_frames(&inputBuffer[dataPointer], opusDataLength);
+    int samples = frame * opus_packet_get_samples_per_frame(&inputBuffer[dataPointer], sampleRate);
     int outputSize = opus_decode(opusDecoder,
                                  reinterpret_cast<const unsigned char *>(&inputBuffer[dataPointer]),
                                  opusDataLength,
@@ -133,7 +143,7 @@ int mumlib::Audio::encodeAudioPacket(int target, int16_t *inputPcmBuffer, int in
     memcpy(outputBuffer, &header[0], header.size());
     memcpy(outputBuffer + header.size(), tmpOpusBuffer, (size_t) outputSize);
 
-    int incrementNumber = 100 * inputLength / this->sampleRate;
+    int incrementNumber = 100 * inputLength / sampleRate;
 
     outgoingSequenceNumber += incrementNumber;
 

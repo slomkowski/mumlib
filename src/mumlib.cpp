@@ -65,6 +65,8 @@ namespace mumlib {
                 auto incomingAudioPacket = audio.decodeIncomingAudioPacket(buffer, length);
 
                 if (type == AudioPacketType::OPUS) {
+                    // todo: multiple users speaking simultaneously (Issue #3)
+                    // something weird while decoding the opus payload
                     int16_t pcmData[5000];
                     auto status = audio.decodeOpusPayload(incomingAudioPacket.audioPayload,
                                                           incomingAudioPacket.audioPayloadLength,
@@ -127,6 +129,11 @@ namespace mumlib {
                 case MessageType::CHANNELREMOVE: {
                     MumbleProto::ChannelRemove channelRemove;
                     channelRemove.ParseFromArray(buffer, length);
+                    
+                    if(isListChannelContains(channelRemove.channel_id())) {
+                        listChannelRemovedBy(channelRemove.channel_id());
+                    }
+
                     callback.channelRemove(channelRemove.channel_id());
                 }
                     break;
@@ -381,6 +388,12 @@ namespace mumlib {
                     return true;
             return false;
         }
+
+        void listChannelRemovedBy(int channelId) {
+            for(int i = 0; i < listMumbleChannel.size(); i++) 
+                if(listMumbleChannel[i].channelId == channelId)
+                    listMumbleChannel.erase(listMumbleChannel.begin() + i);
+        }
     };
 
     Mumlib::Mumlib(Callback &callback) {
@@ -413,11 +426,11 @@ namespace mumlib {
         return impl->channelId;
     }
 
-    vector<mumlib::MumbleUser> Mumlib::getListUser() {
+    vector<mumlib::MumbleUser> Mumlib::getListAllUser() {
         return impl->listMumbleUser;
     }
 
-    vector<mumlib::MumbleChannel> Mumlib::getListChannel() {
+    vector<mumlib::MumbleChannel> Mumlib::getListAllChannel() {
         return impl->listMumbleChannel;
     }
 
@@ -468,23 +481,48 @@ namespace mumlib {
     }
 
     void Mumlib::joinChannel(string name) {
-        int channelId = Mumlib::getListChannelIdBy(name);
-        Mumlib::joinChannel(channelId);
+        int channelId = Mumlib::getChannelIdBy(name);
+        if(!channelId < 0) // when channel has not been registered / create
+            Mumlib::joinChannel(channelId);
     }
 
-    void Mumlib::sendVoiceTarget(int targetId, int channelId) {
+    void Mumlib::sendVoiceTarget(VoiceTargetType type, int targetId, int id) {
         MumbleProto::VoiceTarget voiceTarget;
         MumbleProto::VoiceTarget_Target voiceTargetTarget;
-        voiceTargetTarget.set_channel_id(channelId);
-        voiceTargetTarget.set_children(true);        
+        switch(type) {
+            case VoiceTargetType::CHANNEL: {
+                voiceTargetTarget.set_channel_id(id);
+                voiceTargetTarget.set_children(true);
+            }
+            break;
+            case VoiceTargetType::USER: {
+                voiceTargetTarget.add_session(id);
+            }
+            break;
+            default:
+                return;
+        }
         voiceTarget.set_id(targetId);
         voiceTarget.add_targets()->CopyFrom(voiceTargetTarget);
         impl->transport.sendControlMessage(MessageType::VOICETARGET, voiceTarget);
     }
 
-    void Mumlib::sendVoiceTarget(int targetId, string channelName) {
-        int channelId = Mumlib::getListChannelIdBy(channelName);
-        Mumlib::sendVoiceTarget(targetId, channelId);
+    bool Mumlib::sendVoiceTarget(VoiceTargetType type, int targetId, string name) {
+        int id = -1;
+        switch(type) {
+            case VoiceTargetType::CHANNEL: 
+                id = getChannelIdBy(name);
+                break;
+            case VoiceTargetType::USER:
+                id = getUserIdBy(name);
+                break;
+            default:
+                break;
+        }        
+        if(id < 0)
+            return false;
+        sendVoiceTarget(type, targetId, id);
+        return true;
     }
 
     void Mumlib::sendUserState(mumlib::UserState field, bool val) {
@@ -551,12 +589,21 @@ namespace mumlib {
         impl->transport.sendControlMessage(MessageType::USERSTATE, userState);
     }
 
-    int Mumlib::getListChannelIdBy(string name) {
+    int Mumlib::getChannelIdBy(string name) {
         vector<mumlib::MumbleChannel> listMumbleChannel = impl->listMumbleChannel;
-        int channelId = impl->channelId;
+        int channelId = -1;
         for(int i = 0; i < listMumbleChannel.size(); i++)
             if(listMumbleChannel[i].name == name)
                 channelId = listMumbleChannel[i].channelId;
         return channelId;
+    }
+
+    int Mumlib::getUserIdBy(string name) {
+        vector<mumlib::MumbleUser> listMumbleUser = impl->listMumbleUser;
+        int sessionId = -1;
+        for(int i = 0; i < listMumbleUser.size(); i++)
+            if(listMumbleUser[i].name == name)
+                sessionId = listMumbleUser[i].sessionId;
+        return sessionId;
     }
 }

@@ -55,4 +55,9 @@ namespace mumlib {
         PRIORITY_SPEAKER,
         RECORDING
     };
+
+    enum class VoiceTargetType {
+        CHANNEL,
+        USER
+    };
 }

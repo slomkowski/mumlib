@@ -65,9 +65,9 @@ namespace mumlib {
 
         int getChannelId();
 
-        vector<MumbleUser> getListUser();
+        vector<MumbleUser> getListAllUser();
 
-        vector<MumbleChannel> getListChannel();
+        vector<MumbleChannel> getListAllChannel();
 
         void sendAudioData(int16_t *pcmData, int pcmLength);
 
@@ -79,9 +79,9 @@ namespace mumlib {
 
         void joinChannel(std::string channelName);
 
-        void sendVoiceTarget(int targetId, int channelId);
+        void sendVoiceTarget(mumlib::VoiceTargetType type, int targetId, int id);
 
-        void sendVoiceTarget(int targetId, std::string channelName);
+        bool sendVoiceTarget(mumlib::VoiceTargetType type, int targetId, std::string name);
 
         void sendUserState(mumlib::UserState state, bool val);
 
@@ -90,6 +90,8 @@ namespace mumlib {
     private:
         _Mumlib_Private *impl;
 
-        int getListChannelIdBy(std::string channelName);
+        int getChannelIdBy(std::string channelName);
+
+        int getUserIdBy(std::string userName);
     };
 }
