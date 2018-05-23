@@ -79,9 +79,9 @@ namespace mumlib {
 
         void joinChannel(std::string channelName);
 
-        void sendVoiceTarget(mumlib::VoiceTargetType type, int targetId, int id);
+        void sendVoiceTarget(int targetId, mumlib::VoiceTargetType type, int sessionId);
 
-        bool sendVoiceTarget(mumlib::VoiceTargetType type, int targetId, std::string name);
+        void sendVoiceTarget(int targetId, mumlib::VoiceTargetType type, std::string name, int &error);
 
         void sendUserState(mumlib::UserState state, bool val);
 
@@ -93,5 +93,9 @@ namespace mumlib {
         int getChannelIdBy(std::string channelName);
 
         int getUserIdBy(std::string userName);
+
+        bool isSessionIdValid(int sessionId);
+
+        bool isChannelIdValid(int channelId);
     };
 }
