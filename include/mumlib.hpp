@@ -1,12 +1,12 @@
 #pragma once
 
 #include "mumlib/Callback.hpp"
+#include "mumlib/enums.hpp"
 
 #include <boost/asio.hpp>
 #include <boost/noncopyable.hpp>
 
 #include <string>
-#include <mumlib/enums.hpp>
 
 namespace mumlib {
 
