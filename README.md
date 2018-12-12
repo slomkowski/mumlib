@@ -1,3 +1,5 @@
+**I do not maintain this project and [mumsi](https://github.com/slomkowski/mumsi) any longer, but some new features and bugfixes have been implemented in the [forks](https://github.com/slomkowski/mumlib/network). Check them out!**
+
 # mumlib - simple Mumble client library
 
 Fairy simple Mumble library written in C++, using *boost::asio* asynchronous networking framework. Library supports:
