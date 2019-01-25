@@ -38,19 +38,19 @@ namespace mumlib {
 
         void addFrameToBuffer(uint8_t *inputBuffer, int inputLength, int sequence);
 
-        void fetchAudio(uint8_t *inputBuffer, int bufferOffset, int inputLength);
-
-        void mixAudio(uint8_t *inputBuffer, uint8_t *outputBuffer, int bufferOffset, int inputLength);
+        // todo: mix audio
+        void mixAudio(uint8_t *dest, uint8_t *src, int bufferOffset, int inputLength);
 
         void resizeBuffer();
+
+        std::pair<int, bool> decodeOpusPayload(int16_t *pcmBuffer,
+                                               int pcmBufferSize);
         
         std::pair<int, bool> decodeOpusPayload(uint8_t *inputBuffer,
                                                int inputLength,
                                                int16_t *pcmBuffer,
                                                int pcmBufferSize);
 
-        std::pair<int, bool> decodeOpusPayload(int16_t *pcmBuffer,
-                                               int pcmBufferSize);
 
         int encodeAudioPacket(
                 int target,
@@ -74,17 +74,15 @@ namespace mumlib {
         OpusEncoder *opusEncoder;
         JitterBuffer *jbBuffer;
 
-        mutex m_jitter_mutex;
-
         int64_t outgoingSequenceNumber;
 
-        unsigned int mSampleRate;
-        unsigned int mChannels;
-        unsigned int mFrameSize;
-        unsigned int mAudioBufferSize;
+        unsigned int iSampleRate;
+        unsigned int iChannels;
+        unsigned int iFrameSize;
+        unsigned int iAudioBufferSize;
 
-        float *mFadeIn;
-        float *mFadeOut;
+        float *fFadeIn;
+        float *fFadeOut;
 
         std::chrono::time_point<std::chrono::system_clock> lastEncodedAudioPacketTimestamp;
     };

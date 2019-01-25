@@ -34,7 +34,6 @@ namespace mumlib {
         int sessionId = 0;
         int channelId = 0;
         int64_t seq = 0;
-        mutex jitter_mutex;
 
         std::vector<MumbleUser> listMumbleUser;
         std::vector<MumbleChannel> listMumbleChannel;
@@ -67,8 +66,6 @@ namespace mumlib {
                 auto incomingAudioPacket = audio.decodeIncomingAudioPacket(buffer, length);
 
                 if (type == AudioPacketType::OPUS) {
-                    // todo: multiple users speaking simultaneously (Issue #3)
-                    // something weird while decoding the opus payload
                     int16_t pcmData[5000];
 
                     audio.addFrameToBuffer(incomingAudioPacket.audioPayload, 
@@ -84,13 +81,12 @@ namespace mumlib {
 
                     if(status.second) seq = 0; else seq++;
 
-                    // logger.warn("Decode audio: %d , seq %d", incomingAudioPacket.sessionId, seq);
-
                     callback.audio(incomingAudioPacket.target,
-                                   incomingAudioPacket.sessionId,
-                                   incomingAudioPacket.sequenceNumber,
-                                   pcmData,
-                                   status.first);
+                                incomingAudioPacket.sessionId,
+                                incomingAudioPacket.sequenceNumber,
+                                pcmData,
+                                status.first);
+                    
                 } else {
                     logger.warn("Incoming audio packet doesn't contain Opus data, calling unsupportedAudio callback.");
                     callback.unsupportedAudio(incomingAudioPacket.target,
