@@ -8,7 +8,7 @@
 
 #include <boost/asio.hpp>
 #include <boost/bind.hpp>
-#include <boost/uuid/sha1.hpp>
+#include <openssl/sha.h>
 #include <log4cpp/Category.hh>
 
 #include <Mumble.pb.h>
@@ -33,6 +33,8 @@ namespace mumlib {
 
         int sessionId = 0;
         int channelId = 0;
+        int64_t seq = 0;
+        mutex jitter_mutex;
 
         std::vector<MumbleUser> listMumbleUser;
         std::vector<MumbleChannel> listMumbleChannel;
@@ -68,10 +70,21 @@ namespace mumlib {
                     // todo: multiple users speaking simultaneously (Issue #3)
                     // something weird while decoding the opus payload
                     int16_t pcmData[5000];
-                    auto status = audio.decodeOpusPayload(incomingAudioPacket.audioPayload,
-                                                          incomingAudioPacket.audioPayloadLength,
-                                                          pcmData,
-                                                          5000);
+
+                    audio.addFrameToBuffer(incomingAudioPacket.audioPayload, 
+                                        incomingAudioPacket.audioPayloadLength,
+                                        seq);
+
+                    auto status = audio.decodeOpusPayload(pcmData, 5000);
+
+                    // auto status = audio.decodeOpusPayload(incomingAudioPacket.audioPayload,
+                    //                                       incomingAudioPacket.audioPayloadLength,
+                    //                                       pcmData,
+                    //                                       5000);
+
+                    if(status.second) seq = 0; else seq++;
+
+                    // logger.warn("Decode audio: %d , seq %d", incomingAudioPacket.sessionId, seq);
 
                     callback.audio(incomingAudioPacket.target,
                                    incomingAudioPacket.sessionId,
@@ -377,9 +390,12 @@ namespace mumlib {
         }
 
         void listUserRemovedBy(int sessionId) {
-            for(int i = 0; i < listMumbleUser.size(); i++) 
-                if(listMumbleUser[i].sessionId == sessionId)
+            for(int i = 0; i < listMumbleUser.size(); i++) {
+                if(listMumbleUser[i].sessionId == sessionId) {
                     listMumbleUser.erase(listMumbleUser.begin() + i);
+                    return;
+                }
+            }
         }
 
         bool isListChannelContains(int channelId) {
@@ -390,9 +406,12 @@ namespace mumlib {
         }
 
         void listChannelRemovedBy(int channelId) {
-            for(int i = 0; i < listMumbleChannel.size(); i++) 
-                if(listMumbleChannel[i].channelId == channelId)
+            for(int i = 0; i < listMumbleChannel.size(); i++) {
+                if(listMumbleChannel[i].channelId == channelId) {
                     listMumbleChannel.erase(listMumbleChannel.begin() + i);
+                    return;
+                }
+            }
         }
     };
 
@@ -474,6 +493,8 @@ namespace mumlib {
     }
 
     void Mumlib::joinChannel(int channelId) {
+        if(!isChannelIdValid(channelId)) // when channel has not been registered / create
+            return;
         MumbleProto::UserState userState;
         userState.set_channel_id(channelId);
         impl->transport.sendControlMessage(MessageType::USERSTATE, userState);
@@ -482,11 +503,10 @@ namespace mumlib {
 
     void Mumlib::joinChannel(string name) {
         int channelId = Mumlib::getChannelIdBy(name);
-        if(!channelId < 0) // when channel has not been registered / create
-            Mumlib::joinChannel(channelId);
+        Mumlib::joinChannel(channelId);
     }
 
-    void Mumlib::sendVoiceTarget(VoiceTargetType type, int targetId, int id) {
+    void Mumlib::sendVoiceTarget(int targetId, VoiceTargetType type, int id) {
         MumbleProto::VoiceTarget voiceTarget;
         MumbleProto::VoiceTarget_Target voiceTargetTarget;
         switch(type) {
@@ -507,8 +527,8 @@ namespace mumlib {
         impl->transport.sendControlMessage(MessageType::VOICETARGET, voiceTarget);
     }
 
-    bool Mumlib::sendVoiceTarget(VoiceTargetType type, int targetId, string name) {
-        int id = -1;
+    void Mumlib::sendVoiceTarget(int targetId, VoiceTargetType type, string name, int &error) {
+        int id;
         switch(type) {
             case VoiceTargetType::CHANNEL: 
                 id = getChannelIdBy(name);
@@ -519,10 +539,9 @@ namespace mumlib {
             default:
                 break;
         }        
-        if(id < 0)
-            return false;
-        sendVoiceTarget(type, targetId, id);
-        return true;
+        error = id < 0 ? 1: 0;
+        if(error) return;
+        sendVoiceTarget(targetId, type, id);
     }
 
     void Mumlib::sendUserState(mumlib::UserState field, bool val) {
@@ -560,26 +579,22 @@ namespace mumlib {
 
     void Mumlib::sendUserState(mumlib::UserState field, std::string val) {
         MumbleProto::UserState userState;
+        
+        // if comment longer than 128 bytes, we need to set the SHA1 hash
+        // http://www.askyb.com/cpp/openssl-sha1-hashing-example-in-cpp/
+        unsigned char digest[SHA_DIGEST_LENGTH];
+        char mdString[SHA_DIGEST_LENGTH * 2 + 1];
 
+        SHA1((unsigned char*) val.c_str(), val.size(), digest);
+        for(int i = 0; i < SHA_DIGEST_LENGTH; i++)
+            sprintf(&mdString[i*2], "%02x", (unsigned int) digest[i]);
+	
         switch (field) {
             case UserState::COMMENT:
-                
-                if(val.size() < 128) {
+                if(val.size() < 128)
                     userState.set_comment(val);
-                } else {
-                    // if comment longer than 128 bytes, we need to set the SHA1 hash
-                    boost::uuids::detail::sha1 sha1;
-                    uint hash[5];
-                    sha1.process_bytes(val.c_str(), val.size());
-                    sha1.get_digest(hash);
-
-                    std::stringstream valStream;
-                    for(std::size_t i=0; i<sizeof(hash)/sizeof(hash[0]); ++i) {
-                        valStream << std::hex << hash[i];
-                    }
-                    userState.set_comment_hash(valStream.str());
-                }
-                
+                else
+                    userState.set_comment_hash(mdString);
                 break;
             default:
                 // in any other case, just ignore the command
@@ -591,19 +606,33 @@ namespace mumlib {
 
     int Mumlib::getChannelIdBy(string name) {
         vector<mumlib::MumbleChannel> listMumbleChannel = impl->listMumbleChannel;
-        int channelId = -1;
         for(int i = 0; i < listMumbleChannel.size(); i++)
             if(listMumbleChannel[i].name == name)
-                channelId = listMumbleChannel[i].channelId;
-        return channelId;
+                return listMumbleChannel[i].channelId;
+        return -1;
     }
 
     int Mumlib::getUserIdBy(string name) {
         vector<mumlib::MumbleUser> listMumbleUser = impl->listMumbleUser;
-        int sessionId = -1;
         for(int i = 0; i < listMumbleUser.size(); i++)
             if(listMumbleUser[i].name == name)
-                sessionId = listMumbleUser[i].sessionId;
-        return sessionId;
+                return listMumbleUser[i].sessionId;
+        return -1;
+    }
+
+    bool Mumlib::isSessionIdValid(int sessionId) {
+        vector<mumlib::MumbleUser> listMumbleUser = impl->listMumbleUser;
+        for(int i = 0; i < listMumbleUser.size(); i++)
+            if(listMumbleUser[i].sessionId == sessionId)
+                return true;
+        return false;
+    }
+
+    bool Mumlib::isChannelIdValid(int channelId) {
+        vector<mumlib::MumbleChannel> listMumbleChannel = impl->listMumbleChannel;
+        for(int i = 0; i < listMumbleChannel.size(); i++)
+            if(listMumbleChannel[i].channelId == channelId)
+                return true;
+        return false;
     }
 }

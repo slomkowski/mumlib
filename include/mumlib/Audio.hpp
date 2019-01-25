@@ -4,6 +4,8 @@
 
 #include <opus/opus.h>
 
+#include <speex/speex_jitter.h>
+
 #include <chrono>
 
 namespace mumlib {
@@ -26,17 +28,28 @@ namespace mumlib {
 
     class Audio : boost::noncopyable {
     public:
-        explicit Audio(int opusSampleRate=DEFAULT_OPUS_SAMPLE_RATE,
-                       int opusEncoderBitrate=DEFAULT_OPUS_ENCODER_BITRATE,
+        explicit Audio(int sampleRate=DEFAULT_OPUS_SAMPLE_RATE,
+                       int bitrate=DEFAULT_OPUS_ENCODER_BITRATE,
                        int channels=DEFAULT_OPUS_NUM_CHANNELS);
 
         virtual ~Audio();
 
         IncomingAudioPacket decodeIncomingAudioPacket(uint8_t *inputBuffer, int inputBufferLength);
 
+        void addFrameToBuffer(uint8_t *inputBuffer, int inputLength, int sequence);
+
+        void fetchAudio(uint8_t *inputBuffer, int bufferOffset, int inputLength);
+
+        void mixAudio(uint8_t *inputBuffer, uint8_t *outputBuffer, int bufferOffset, int inputLength);
+
+        void resizeBuffer();
+        
         std::pair<int, bool> decodeOpusPayload(uint8_t *inputBuffer,
                                                int inputLength,
                                                int16_t *pcmBuffer,
+                                               int pcmBufferSize);
+
+        std::pair<int, bool> decodeOpusPayload(int16_t *pcmBuffer,
                                                int pcmBufferSize);
 
         int encodeAudioPacket(
@@ -52,14 +65,26 @@ namespace mumlib {
 
         void resetEncoder();
 
+        void resetJitterBuffer();
+
     private:
         log4cpp::Category &logger;
 
         OpusDecoder *opusDecoder;
         OpusEncoder *opusEncoder;
+        JitterBuffer *jbBuffer;
+
+        mutex m_jitter_mutex;
 
         int64_t outgoingSequenceNumber;
-        int sampleRate;
+
+        unsigned int mSampleRate;
+        unsigned int mChannels;
+        unsigned int mFrameSize;
+        unsigned int mAudioBufferSize;
+
+        float *mFadeIn;
+        float *mFadeOut;
 
         std::chrono::time_point<std::chrono::system_clock> lastEncodedAudioPacketTimestamp;
     };

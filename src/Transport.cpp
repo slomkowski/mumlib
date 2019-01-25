@@ -81,7 +81,7 @@ void mumlib::Transport::connect(
 
             doReceiveUdp();
         }
-
+        
         ip::tcp::resolver resolverTcp(ioService);
         ip::tcp::resolver::query queryTcp(host, to_string(port));
 
