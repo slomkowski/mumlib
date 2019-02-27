@@ -38,12 +38,20 @@ namespace mumlib {
             externalIoService = false;
         }
 
-        _Mumlib_Private(Callback &callback, io_service &ioService, MumlibConfiguration &configuration)
+        _Mumlib_Private(
+                Callback &callback,
+                io_service &ioService,
+                MumlibConfiguration &configuration)
                 : callback(callback),
                   ioService(ioService),
                   externalIoService(true),
-                  transport(ioService, boost::bind(&_Mumlib_Private::processIncomingTcpMessage, this, _1, _2, _3),
-                            boost::bind(&_Mumlib_Private::processAudioPacket, this, _1, _2, _3)) {
+                  transport(
+                          ioService,
+                          boost::bind(&_Mumlib_Private::processIncomingTcpMessage, this, _1, _2, _3),
+                          boost::bind(&_Mumlib_Private::processAudioPacket, this, _1, _2, _3),
+                          false,
+                          configuration.cert_file,
+                          configuration.privkey_file) {
 
             audio.setOpusEncoderBitrate(configuration.opusEncoderBitrate);
         }
@@ -347,7 +355,7 @@ namespace mumlib {
         impl = new _Mumlib_Private(callback, ioService, conf);
     }
 
-    Mumlib::Mumlib(Callback &callback, MumlibConfiguration &configuration)
+    Mumlib::Mumlib(Callback &callback, MumlibConfiguration &configuration) 
             : impl(new _Mumlib_Private(callback, configuration)) { }
 
     Mumlib::Mumlib(Callback &callback, io_service &ioService, MumlibConfiguration &configuration)
@@ -404,4 +412,68 @@ namespace mumlib {
         impl->transport.sendControlMessage(MessageType::USERSTATE, userState);
         impl->channelId = channelId;
     }
+
+    void Mumlib::sendUserState(mumlib::UserState field, bool val) {
+        MumbleProto::UserState userState;
+
+        switch (field) {
+            case UserState::MUTE:
+                userState.set_mute(val);
+                break;
+            case UserState::DEAF:
+                userState.set_deaf(val);
+                break;
+            case UserState::SUPPRESS:
+                userState.set_suppress(val);
+                break;
+            case UserState::SELF_MUTE:
+                userState.set_self_mute(val);
+                break;
+            case UserState::SELF_DEAF:
+                userState.set_self_deaf(val);
+                break;
+            case UserState::PRIORITY_SPEAKER:
+                userState.set_priority_speaker(val);
+                break;
+            case UserState::RECORDING:
+                userState.set_recording(val);
+                break;
+            default:
+                // in any other case, just ignore the command
+                return;
+        }
+
+        impl->transport.sendControlMessage(MessageType::USERSTATE, userState);
+    }
+
+    void Mumlib::sendUserState(mumlib::UserState field, std::string val) {
+        MumbleProto::UserState userState;
+
+        switch (field) {
+            case UserState::COMMENT:
+                // TODO: if comment longer than 128 bytes, we need to set the SHA1 hash
+                userState.set_comment(val);
+                break;
+            default:
+                // in any other case, just ignore the command
+                return;
+        }
+
+        impl->transport.sendControlMessage(MessageType::USERSTATE, userState);
+    }
+
+    // deprecated by sendUserState()
+    void Mumlib::self_mute(int muteness) {
+        MumbleProto::UserState userState;
+        userState.set_self_mute(muteness);
+        impl->transport.sendControlMessage(MessageType::USERSTATE, userState);
+    }
+
+    // deprecated by sendUserState()
+    void Mumlib::self_deaf(int deafness) {
+        MumbleProto::UserState userState;
+        userState.set_self_deaf(deafness);
+        impl->transport.sendControlMessage(MessageType::USERSTATE, userState);
+    }
+
 }

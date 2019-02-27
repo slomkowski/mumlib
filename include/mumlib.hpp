@@ -22,6 +22,8 @@ namespace mumlib {
 
     struct MumlibConfiguration {
         int opusEncoderBitrate = DEFAULT_OPUS_ENCODER_BITRATE;
+        std::string cert_file = "";
+        std::string privkey_file = "";
         // additional fields will be added in the future
     };
 
@@ -53,6 +55,14 @@ namespace mumlib {
         void sendTextMessage(std::string message);
 
         void joinChannel(int channelId);
+
+        void sendUserState(mumlib::UserState field, bool val);
+
+        void sendUserState(mumlib::UserState field, string val);
+
+        // These two are deprecated by sendUserState
+        void self_mute(int muteness);
+        void self_deaf(int deafness);
 
     private:
         _Mumlib_Private *impl;

@@ -29,7 +29,9 @@ mumlib::Transport::Transport(
         io_service &ioService,
         mumlib::ProcessControlMessageFunction processMessageFunc,
         ProcessEncodedAudioPacketFunction processEncodedAudioPacketFunction,
-        bool noUdp) :
+        bool noUdp,
+        std::string cert_file,
+        std::string privkey_file) :
         logger(log4cpp::Category::getInstance("mumlib.Transport")),
         ioService(ioService),
         processMessageFunction(processMessageFunc),
@@ -38,6 +40,7 @@ mumlib::Transport::Transport(
         state(ConnectionState::NOT_CONNECTED),
         udpSocket(ioService),
         sslContext(ssl::context::sslv23),
+        sslContextHelper(sslContext, cert_file, privkey_file),
         sslSocket(ioService, sslContext),
         pingTimer(ioService, PING_INTERVAL),
         asyncBufferPool(max(MAX_UDP_LENGTH, MAX_TCP_LENGTH)) {
@@ -66,6 +69,7 @@ void mumlib::Transport::connect(
     udpActive = false;
 
     sslSocket.set_verify_mode(boost::asio::ssl::verify_peer);
+
 
     //todo for now it accepts every certificate, move it to callback
     sslSocket.set_verify_callback([](bool preverified, boost::asio::ssl::verify_context &ctx) {
@@ -520,6 +524,16 @@ void mumlib::Transport::throwTransportException(string message) {
     throw TransportException(message);
 }
 
+mumlib::SslContextHelper::SslContextHelper(ssl::context &ctx, std::string cert_file, std::string privkey_file) {
+    if ( cert_file.size() > 0 ) {
+        ctx.use_certificate_file(cert_file, ssl::context::file_format::pem);
+    }
+    if ( privkey_file.size() > 0 ) {
+        ctx.use_private_key_file(privkey_file, ssl::context::file_format::pem);
+    }
+}
+
+
 void mumlib::Transport::sendEncodedAudioPacket(uint8_t *buffer, int length) {
     if (state != ConnectionState::CONNECTED) {
         logger.warn("Connection not established.");
@@ -527,10 +541,10 @@ void mumlib::Transport::sendEncodedAudioPacket(uint8_t *buffer, int length) {
     }
 
     if (udpActive) {
-        logger.info("Sending %d B of audio data via UDP.", length);
+        logger.debug("Sending %d B of audio data via UDP.", length);
         sendUdpAsync(buffer, length);
     } else {
-        logger.info("Sending %d B of audio data via TCP.", length);
+        logger.debug("Sending %d B of audio data via TCP.", length);
 
         const uint16_t netUdptunnelType = htons(static_cast<uint16_t>(MessageType::UDPTUNNEL));
 
