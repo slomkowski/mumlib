@@ -1,16 +1,15 @@
 #pragma once
 
-#include "mumlib/CryptState.hpp"
-#include "mumlib/VarInt.hpp"
-#include "enums.hpp"
+#include <mumlib/CryptState.hpp>
+#include <mumlib/VarInt.hpp>
+#include <mumlib/enums.hpp>
 
 #include <boost/noncopyable.hpp>
-#include <boost/asio/ssl.hpp>
-#include <boost/asio.hpp>
 #include <boost/bind.hpp>
 #include <boost/pool/pool.hpp>
-
-#include <log4cpp/Category.hh>
+#ifdef MUMLIB_USE_LOG4CPP
+#include <MUMLIB_USE_LOG4CPP/Category.hh>
+#endif
 #include <google/protobuf/message.h>
 
 #include <chrono>
@@ -27,18 +26,20 @@ namespace mumlib {
     typedef function<bool(MessageType, uint8_t *, int)> ProcessControlMessageFunction;
 
     typedef function<bool(AudioPacketType, uint8_t *, int)> ProcessEncodedAudioPacketFunction;
-
+#ifdef MUMLIB_USE_EXCEPTIONS
     class TransportException : public MumlibException {
     public:
         TransportException(string message) : MumlibException(message) { }
     };
+#endif
 
     class Transport : boost::noncopyable {
     public:
         Transport(io_service &ioService,
                   ProcessControlMessageFunction processControlMessageFunc,
                   ProcessEncodedAudioPacketFunction processEncodedAudioPacketFunction,
-                  bool noUdp = false);
+                  MumlibConfiguration MumblConfig,
+                  bool noUdp = true);
 
         ~Transport();
 
@@ -59,8 +60,15 @@ namespace mumlib {
 
         void sendEncodedAudioPacket(uint8_t *buffer, int length);
 
+        void set_callback(Callback *cb)
+        {
+            this->cb = cb;
+        }
+
     private:
-        log4cpp::Category &logger;
+#ifdef MUMLIB_USE_LOG4CPP
+        MUMLIB_USE_LOG4CPP::Category &logger;
+#endif
 
         io_service &ioService;
 
@@ -84,13 +92,20 @@ namespace mumlib {
         CryptState cryptState;
 
         ssl::context sslContext;
-        ssl::stream<tcp::socket> sslSocket;
+        ssl::stream<tcp::socket> *sslSocket; //must be created after context already configured
         uint8_t *sslIncomingBuffer;
 
         deadline_timer pingTimer;
         std::chrono::time_point<std::chrono::system_clock> lastReceivedUdpPacketTimestamp;
 
         boost::pool<> asyncBufferPool;
+
+        MumlibConfiguration MumbleConfig;
+        //session related data
+        std::string name;
+        uint32_t session;
+        //
+        Callback *cb = nullptr;
 
         void pingTimerTick(const boost::system::error_code &e);
 
@@ -119,8 +134,9 @@ namespace mumlib {
         void sendUdpAsync(uint8_t *buff, int length);
 
         void sendUdpPing();
-
+#ifdef MUMLIB_USE_EXCEPTIONS
         void throwTransportException(string message);
+#endif
 
         void processAudioPacket(uint8_t *buff, int length);
     };

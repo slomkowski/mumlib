@@ -142,6 +142,7 @@ namespace mumlib {
                 uint32_t version,
                 uint32_t positional,
                 uint32_t push_to_talk) { };
+        virtual void disconnected () {};
 
     };
 
@@ -285,6 +286,7 @@ namespace mumlib {
                 uint32_t version,
                 uint32_t positional,
                 uint32_t push_to_talk) override;
+        virtual void disconnected() override;
 
     private:
         _BasicCallback_Private *impl;

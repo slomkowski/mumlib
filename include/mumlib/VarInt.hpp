@@ -7,10 +7,12 @@
 #include <string>
 
 namespace mumlib {
+#ifdef MUMLIB_USE_EXCEPTIONS
     class VarIntException : public MumlibException {
     public:
         VarIntException(std::string message) : MumlibException(message) { }
     };
+#endif
 
     class VarInt {
     public:
