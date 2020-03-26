@@ -36,7 +36,7 @@
 namespace mumlib {
 
     class CryptState : boost::noncopyable {
-    public:
+    private:
         unsigned char raw_key[AES_BLOCK_SIZE];
         unsigned char encrypt_iv[AES_BLOCK_SIZE];
         unsigned char decrypt_iv[AES_BLOCK_SIZE];
@@ -56,13 +56,18 @@ namespace mumlib {
         AES_KEY decrypt_key;
         bool bInit;
 
+    public:
         CryptState();
 
         bool isValid() const;
 
+        void genKey();
+
         void setKey(const unsigned char *rkey, const unsigned char *eiv, const unsigned char *div);
 
         void setDecryptIV(const unsigned char *iv);
+
+        const unsigned char* getEncryptIV() const;
 
         void ocb_encrypt(const unsigned char *plain, unsigned char *encrypted, unsigned int len,
                          const unsigned char *nonce,

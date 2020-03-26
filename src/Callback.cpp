@@ -35,7 +35,7 @@ void mumlib::BasicCallback::version(
                        os_version.c_str());
 }
 
-void mumlib::BasicCallback::audio(
+void BasicCallback::audio(
         int target,
         int sessionId,
         int sequenceNumber,

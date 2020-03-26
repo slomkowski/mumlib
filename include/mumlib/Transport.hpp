@@ -14,6 +14,7 @@
 #include <google/protobuf/message.h>
 
 #include <chrono>
+#include <utility>
 
 namespace mumlib {
 
@@ -30,7 +31,7 @@ namespace mumlib {
 
     class TransportException : public MumlibException {
     public:
-        TransportException(string message) : MumlibException(message) { }
+        TransportException(string message) : MumlibException(std::move(message)) { }
     };
 
     class Transport : boost::noncopyable {

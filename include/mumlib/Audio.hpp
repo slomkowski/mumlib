@@ -2,19 +2,19 @@
 
 #include "Transport.hpp"
 
-#include <opus.h>
+#include <opus/opus.h>
+
+#include <speex/speex_jitter.h>
 
 #include <chrono>
 
 namespace mumlib {
 
-    constexpr int SAMPLE_RATE = 48000;
-
     class MumlibException;
 
     class AudioException : public MumlibException {
     public:
-        AudioException(string message) : MumlibException(message) { }
+        explicit AudioException(string message) : MumlibException(message) { }
     };
 
     struct IncomingAudioPacket {
@@ -28,16 +28,29 @@ namespace mumlib {
 
     class Audio : boost::noncopyable {
     public:
-        Audio(int opusEncoderBitrate = DEFAULT_OPUS_ENCODER_BITRATE);
+        explicit Audio(int sampleRate=DEFAULT_OPUS_SAMPLE_RATE,
+                       int bitrate=DEFAULT_OPUS_ENCODER_BITRATE,
+                       int channels=DEFAULT_OPUS_NUM_CHANNELS);
 
         virtual ~Audio();
 
         IncomingAudioPacket decodeIncomingAudioPacket(uint8_t *inputBuffer, int inputBufferLength);
 
+        void addFrameToBuffer(uint8_t *inputBuffer, int inputLength, int sequence);
+
+        // todo: mix audio
+        void mixAudio(uint8_t *dest, uint8_t *src, int bufferOffset, int inputLength);
+
+        void resizeBuffer();
+
+        std::pair<int, bool> decodeOpusPayload(int16_t *pcmBuffer,
+                                               int pcmBufferSize);
+        
         std::pair<int, bool> decodeOpusPayload(uint8_t *inputBuffer,
                                                int inputLength,
                                                int16_t *pcmBuffer,
                                                int pcmBufferSize);
+
 
         int encodeAudioPacket(
                 int target,
@@ -52,13 +65,24 @@ namespace mumlib {
 
         void resetEncoder();
 
+        void resetJitterBuffer();
+
     private:
         log4cpp::Category &logger;
 
         OpusDecoder *opusDecoder;
         OpusEncoder *opusEncoder;
+        JitterBuffer *jbBuffer;
 
         int64_t outgoingSequenceNumber;
+
+        unsigned int iSampleRate;
+        unsigned int iChannels;
+        unsigned int iFrameSize;
+        unsigned int iAudioBufferSize;
+
+        float *fFadeIn;
+        float *fFadeOut;
 
         std::chrono::time_point<std::chrono::system_clock> lastEncodedAudioPacketTimestamp;
     };
