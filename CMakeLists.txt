@@ -63,7 +63,7 @@ target_link_libraries(mumlib
         ${LOG4CPP_LIBRARIES}
         ${OPUS_LIBRARIES})
 
-# add_executable(mumlib_example mumlib_example.cpp)
-# target_link_libraries(mumlib_example mumlib)
+add_executable(mumlib_example mumlib_example.cpp)
+target_link_libraries(mumlib_example mumlib)
 
 install(TARGETS mumlib LIBRARY DESTINATION lib)
