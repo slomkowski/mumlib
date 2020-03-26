@@ -137,8 +137,6 @@ std::pair<int, bool> mumlib::Audio::decodeOpusPayload(int16_t *pcmBuffer, int pc
     jitter_buffer_remaining_span(jbBuffer, remaining);
     int timestamp = jitter_buffer_get_pointer_timestamp(jbBuffer);
 
-    logger.warn("jbBufer, avail: %d, remain: %d, timestamp: %d", avail, remaining, timestamp);
-
     char data[4096];
     JitterBufferPacket jbPacket;
     jbPacket.data = data;
