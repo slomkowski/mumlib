@@ -63,7 +63,9 @@ target_link_libraries(mumlib
         ${LOG4CPP_LIBRARIES}
         ${OPUS_LIBRARIES})
 
+set_target_properties(mumlib PROPERTIES PUBLIC_HEADER "${MUMLIB_PUBLIC_HEADERS}")
+
 add_executable(mumlib_example mumlib_example.cpp)
 target_link_libraries(mumlib_example mumlib)
 
-install(TARGETS mumlib LIBRARY DESTINATION lib)
+install(TARGETS mumlib LIBRARY DESTINATION lib PUBLIC_HEADER DESTINATION include/mumlib)
