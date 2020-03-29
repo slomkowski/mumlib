@@ -10,7 +10,7 @@
 
 namespace mumlib {
 
-    constexpr int DEFAULT_OPUS_ENCODER_BITRATE = 16000;
+    constexpr int DEFAULT_OPUS_ENCODER_BITRATE = 1500;
     constexpr int DEFAULT_OPUS_SAMPLE_RATE = 24000;
     constexpr int DEFAULT_OPUS_NUM_CHANNELS = 1;
 
