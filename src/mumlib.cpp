@@ -80,7 +80,7 @@ namespace mumlib {
                                         incomingAudioPacket.audioPayloadLength,
                                         seq);
 
-                    auto status = audio.decodeOpusPayload(pcmData, 5000);
+                    auto status = audio.decodeOpusPayload(incomingAudioPacket.sessionId, pcmData, 5000);
 
                     // auto status = audio.decodeOpusPayload(incomingAudioPacket.audioPayload,
                     //                                       incomingAudioPacket.audioPayloadLength,

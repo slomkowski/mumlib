@@ -7,6 +7,7 @@
 #include <speex/speex_jitter.h>
 
 #include <chrono>
+#include <map>
 
 namespace mumlib {
 
@@ -43,11 +44,13 @@ namespace mumlib {
 
         void resizeBuffer();
 
-        std::pair<int, bool> decodeOpusPayload(int16_t *pcmBuffer,
+        std::pair<int, bool> decodeOpusPayload(int sessionId,
+                                               int16_t *pcmBuffer,
                                                int pcmBufferSize);
         
         std::pair<int, bool> decodeOpusPayload(uint8_t *inputBuffer,
                                                int inputLength,
+                                               int sessionId,
                                                int16_t *pcmBuffer,
                                                int pcmBufferSize);
 
@@ -70,7 +73,7 @@ namespace mumlib {
     private:
         log4cpp::Category &logger;
 
-        OpusDecoder *opusDecoder;
+        std::map<int, OpusDecoder *> opusDecoders;
         OpusEncoder *opusEncoder;
         JitterBuffer *jbBuffer;
 

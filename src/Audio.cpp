@@ -4,9 +4,25 @@
 
 static boost::posix_time::seconds RESET_SEQUENCE_NUMBER_INTERVAL(5);
 
+namespace {
+
+OpusDecoder* CreateOpusDecoder(int sampleRate, int channels)
+{
+    int error;
+    OpusDecoder* decoder = nullptr;
+
+    decoder = opus_decoder_create(sampleRate, channels, &error);
+    if (error != OPUS_OK) {
+        throw mumlib::AudioException((boost::format("failed to initialize OPUS decoder: %s") % opus_strerror(error)).str());
+    }
+
+    return decoder;
+}
+
+} // anonymous namespace
+
 mumlib::Audio::Audio(int sampleRate, int bitrate, int channels)
         : logger(log4cpp::Category::getInstance("mumlib.Audio")),
-          opusDecoder(nullptr),
           opusEncoder(nullptr),
           outgoingSequenceNumber(0),
           iSampleRate(sampleRate),
@@ -16,11 +32,6 @@ mumlib::Audio::Audio(int sampleRate, int bitrate, int channels)
     iFrameSize = sampleRate / 100;
     iAudioBufferSize = iFrameSize;
     iAudioBufferSize *= 12;
-
-    opusDecoder = opus_decoder_create(sampleRate, channels, &error);
-    if (error != OPUS_OK) {
-        throw AudioException((boost::format("failed to initialize OPUS decoder: %s") % opus_strerror(error)).str());
-    }
 
     opusEncoder = opus_encoder_create(sampleRate, channels, OPUS_APPLICATION_VOIP, &error);
     if (error != OPUS_OK) {
@@ -70,8 +81,8 @@ mumlib::Audio::Audio(int sampleRate, int bitrate, int channels)
 }
 
 mumlib::Audio::~Audio() {
-    if (opusDecoder) {
-        opus_decoder_destroy(opusDecoder);
+    for (const auto decoder : opusDecoders) {
+        opus_decoder_destroy(decoder.second);
     }
 
     if (opusEncoder) {
@@ -130,7 +141,7 @@ void mumlib::Audio::addFrameToBuffer(uint8_t *inputBuffer, int inputLength, int 
     jitter_buffer_put(jbBuffer, &jbPacket);
 }
 
-std::pair<int, bool> mumlib::Audio::decodeOpusPayload(int16_t *pcmBuffer, int pcmBufferSize) {
+std::pair<int, bool> mumlib::Audio::decodeOpusPayload(int sessionId, int16_t *pcmBuffer, int pcmBufferSize) {
     int avail = 0;
     spx_uint32_t remaining = 0;
     jitter_buffer_ctl(jbBuffer, JITTER_BUFFER_GET_AVAILABLE_COUNT, &avail);
@@ -153,7 +164,10 @@ std::pair<int, bool> mumlib::Audio::decodeOpusPayload(int16_t *pcmBuffer, int pc
     } else {
         jitter_buffer_update_delay(jbBuffer, &jbPacket, NULL);
     }
-    
+    OpusDecoder* &opusDecoder = opusDecoders[sessionId];
+    if (!opusDecoder) {
+        opusDecoder = CreateOpusDecoder(iSampleRate, iChannels);
+    }
     if(opusDataLength) {
         outputSize = opus_decode(opusDecoder, 
                                     reinterpret_cast<const unsigned char *>(jbPacket.data),
@@ -200,6 +214,7 @@ void mumlib::Audio::mixAudio(uint8_t *dest, uint8_t *src, int bufferOffset, int 
 
 std::pair<int, bool>  mumlib::Audio::decodeOpusPayload(uint8_t *inputBuffer,
                                                        int inputLength,
+                                                       int sessionId,
                                                        int16_t *pcmBuffer,
                                                        int pcmBufferSize) {
     int64_t opusDataLength;
@@ -227,6 +242,10 @@ std::pair<int, bool>  mumlib::Audio::decodeOpusPayload(uint8_t *inputBuffer,
     auto *packet = reinterpret_cast<const unsigned char *>(&inputBuffer[dataPointer]);
     int frame = opus_packet_get_nb_frames(packet, opusDataLength);
     int samples = frame * opus_packet_get_samples_per_frame(packet, iSampleRate);
+    OpusDecoder* &opusDecoder = opusDecoders[sessionId];
+    if (!opusDecoder) {
+        opusDecoder = CreateOpusDecoder(iSampleRate, iChannels);
+    }
     int outputSize = opus_decode(opusDecoder,
                                  packet,
                                  opusDataLength,
