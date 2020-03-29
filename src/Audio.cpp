@@ -2,7 +2,7 @@
 
 #include <boost/format.hpp>
 
-static boost::posix_time::seconds RESET_SEQUENCE_NUMBER_INTERVAL(5);
+static boost::posix_time::seconds RESET_SEQUENCE_NUMBER_INTERVAL(2);
 
 namespace {
 
