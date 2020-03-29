@@ -12,11 +12,14 @@ class MyCallback : public mumlib::BasicCallback {
 public:
     mumlib::Mumlib *mum;
 
+    log4cpp::Category &logger = log4cpp::Category::getRoot();
+
     virtual void audio(int target,
                        int sessionId,
                        int sequenceNumber,
                        int16_t *pcm_data,
                        uint32_t pcm_data_size) override {
+        logger.notice("Received audio: pcm_data_size: %d", pcm_data_size);
         mum->sendAudioData(pcm_data, pcm_data_size);
     }
 
@@ -27,6 +30,7 @@ public:
             std::vector<uint32_t> tree_id,
             std::string message) override {
         mumlib::BasicCallback::textMessage(actor, session, channel_id, tree_id, message);
+        logger.notice("Received text message: %s", message.c_str());
         mum->sendTextMessage("someone said: " + message);
     }
 };
