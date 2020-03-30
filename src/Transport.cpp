@@ -117,7 +117,6 @@ void mumlib::Transport::disconnect() {
         if (errorCode) {
             logger.warn("UDP socket close returned error: %s.", errorCode.message().c_str());
         }
-
         state = ConnectionState::NOT_CONNECTED;
     }
 }
@@ -506,7 +505,7 @@ void mumlib::Transport::sendControlMessagePrivate(MessageType type, google::prot
 
     const int length = sizeof(type_network) + sizeof(size_network) + size;
 
-    uint8_t buff[MAX_TCP_LENGTH];
+    uint8_t buff[MAX_UDP_LENGTH];
 
     memcpy(buff, &type_network, sizeof(type_network));
 
@@ -551,7 +550,7 @@ void mumlib::Transport::sendEncodedAudioPacket(uint8_t *buffer, int length) {
 
         const int packet = sizeof(netUdptunnelType) + sizeof(netLength) + length;
 
-        uint8_t packetBuff[MAX_TCP_LENGTH];
+        uint8_t packetBuff[MAX_UDP_LENGTH];
 
         memcpy(packetBuff, &netUdptunnelType, sizeof(netUdptunnelType));
         memcpy(packetBuff + sizeof(netUdptunnelType), &netLength, sizeof(netLength));
