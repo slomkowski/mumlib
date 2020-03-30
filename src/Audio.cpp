@@ -352,15 +352,17 @@ mumlib::IncomingAudioPacket mumlib::Audio::decodeIncomingAudioPacket(uint8_t *in
                               dataPointer).str());
     }
 
-    logger.debug(
-            "Received %d B of audio packet, %d B header, %d B payload (target: %d, sessionID: %ld, seq num: %ld).",
+    //logger.debug(
+/*
+    printf(
+            "Received %d B of audio packet, %d B header, %d B payload (target: %d, sessionID: %ld, seq num: %ld).\n",
             inputBufferLength,
             dataPointer,
             incomingAudioPacket.audioPayloadLength,
             incomingAudioPacket.target,
             incomingAudioPacket.sessionId,
             incomingAudioPacket.sequenceNumber);
-
+*/
     return incomingAudioPacket;
 }
 
