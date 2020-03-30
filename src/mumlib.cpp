@@ -492,6 +492,7 @@ namespace mumlib {
         MumbleProto::TextMessage textMessage;
         textMessage.set_actor(impl->sessionId);
         textMessage.add_channel_id(impl->channelId);
+        //textMessage.add_session(4); //send to a specific user
         textMessage.set_message(message);
         impl->transport.sendControlMessage(MessageType::TEXTMESSAGE, textMessage);
     }
