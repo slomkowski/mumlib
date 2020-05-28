@@ -60,4 +60,11 @@ namespace mumlib {
         CHANNEL,
         USER
     };
+
+    enum class PingState {
+        PING,
+        PONG,
+        NONE
+    };
+
 }

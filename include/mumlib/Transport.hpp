@@ -18,7 +18,7 @@
 
 namespace mumlib {
 
-    constexpr int MAX_UDP_LENGTH = 4 * 1024;
+    constexpr int MAX_UDP_LENGTH = 1024;
     constexpr int MAX_TCP_LENGTH = 129 * 1024; // 128 kB + some reserve
 
     using namespace std;
@@ -99,6 +99,7 @@ namespace mumlib {
         volatile bool udpActive;
 
         ConnectionState state;
+        PingState ping_state;
 
         udp::socket udpSocket;
         ip::udp::endpoint udpReceiverEndpoint;
