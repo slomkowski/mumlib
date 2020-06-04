@@ -598,7 +598,7 @@ void mumlib::Transport::processAudioPacket(uint8_t *buff, int length) {
         case AudioPacketType::CELT_Beta:
         case AudioPacketType::OPUS:
             processEncodedAudioPacketFunction(type, buff, length);
-            logger.warn("audio typehex: 0x%2x typedec: %d", buff[0], type);
+            //logger.warn("audio typehex: 0x%2x typedec: %d", buff[0], type);
             break;
         case AudioPacketType::Ping:
             break;
