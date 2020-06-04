@@ -11,8 +11,6 @@
 
 namespace mumlib {
 
-    constexpr int SAMPLE_RATE = 24000;
-
     class MumlibException;
 
     class AudioException : public MumlibException {
