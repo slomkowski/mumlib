@@ -49,14 +49,14 @@ int main(int argc, char *argv[]) {
     while (true) {
         try {
             mumlib::MumlibConfiguration conf;
-            conf.opusEncoderBitrate = 32000;
+            conf.opusEncoderBitrate = 16000;
             if ( argc > 3 && argc <= 5 ) {
                 conf.cert_file = argv[3];
                 conf.privkey_file = argv[4];
             }
             mumlib::Mumlib mum(myCallback, conf);
             myCallback.mum = &mum;
-            mum.connect(argv[1], 64738, "mumlib_example", argv[2]);
+            mum.connect(argv[1], 1234, "mumlib_example2", argv[2]);
             mum.run();
         } catch (mumlib::TransportException &exp) {
             logger.error("TransportException: %s.", exp.what());
