@@ -64,6 +64,8 @@ mumlib::Audio::Audio(int sampleRate, int bitrate, int channels)
                             % opus_strerror(ret)).str());
     }
 
+    opus_encoder_ctl(opusEncoder, OPUS_SET_SIGNAL(OPUS_SIGNAL_VOICE));
+
     resetEncoder();
 
     jbBuffer = jitter_buffer_init(iFrameSize);
@@ -273,7 +275,7 @@ int mumlib::Audio::encodeAudioPacket(int target, int16_t *inputPcmBuffer, int in
             system_clock::now() - lastEncodedAudioPacketTimestamp).count();
 
     if (lastAudioPacketSentInterval > RESET_SEQUENCE_NUMBER_INTERVAL.total_milliseconds() + 1000) {
-        logger.debug("Last audio packet was sent %d ms ago, resetting encoder.", lastAudioPacketSentInterval);
+        logger.notice("Last audio packet was sent %d ms ago, resetting encoder.", lastAudioPacketSentInterval);
         resetEncoder();
     }
 
