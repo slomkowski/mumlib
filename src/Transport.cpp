@@ -6,7 +6,7 @@
 
 using namespace std;
 
-static boost::posix_time::seconds PING_INTERVAL(5);
+static boost::posix_time::seconds PING_INTERVAL(4);
 
 const long CLIENT_VERSION = 0x01020A;
 const string CLIENT_RELEASE("Mumlib");
@@ -102,13 +102,13 @@ void mumlib::Transport::disconnect() {
         boost::system::error_code errorCode;
 
         // todo perform different operations for each ConnectionState
-
+/*
         sslSocket.shutdown(errorCode);
         if (errorCode) {
             logger.warn("SSL socket shutdown returned an error: %s.", errorCode.message().c_str());
         }
-
-        sslSocket.lowest_layer().shutdown(tcp::socket::shutdown_both, errorCode);
+*/
+        sslSocket.lowest_layer().close(errorCode);
         if (errorCode) {
             logger.warn("SSL socket lowest layer shutdown returned an error: %s.", errorCode.message().c_str());
         }
@@ -315,8 +315,8 @@ void mumlib::Transport::doReceiveSsl() {
 
                     int messageType = ntohs(*reinterpret_cast<uint16_t *>(sslIncomingBuffer));
 
-                    logger.debug("Received %d B of data (%d B payload, type %d).", bytesTransferred,
-                                 bytesTransferred - 6, messageType);
+                    //logger.warn("Received %d B of data (%d B payload, type %d).", bytesTransferred,
+                    //             bytesTransferred - 6, messageType);
 
                     processMessageInternal(
                             static_cast<MessageType>(messageType),
@@ -337,7 +337,7 @@ void mumlib::Transport::processMessageInternal(MessageType messageType, uint8_t 
     switch (messageType) {
 
         case MessageType::UDPTUNNEL: {
-            logger.debug("Received %d B of encoded audio data via TCP.", length);
+            logger.warn("Received %d B of encoded audio data via TCP.", length);
             processAudioPacket(buffer, length);
         }
             break;
@@ -365,7 +365,7 @@ void mumlib::Transport::processMessageInternal(MessageType messageType, uint8_t 
             if (ping.has_udp_ping_avg()) {
                 log << " UDP avg: " << ping.udp_ping_avg() << " ms";
             }
-            logger.debug(log.str());
+            //logger.warn(log.str());
         }
             break;
         case MessageType::REJECT: {
@@ -389,7 +389,7 @@ void mumlib::Transport::processMessageInternal(MessageType messageType, uint8_t 
         case MessageType::SERVERSYNC: {
             state = ConnectionState::CONNECTED;
 
-            logger.debug("SERVERSYNC. Calling external ProcessControlMessageFunction.");
+            logger.warn("SERVERSYNC. Calling external ProcessControlMessageFunction.");
             processMessageFunction(messageType, buffer, length);
         }
             break;
@@ -413,17 +413,17 @@ void mumlib::Transport::processMessageInternal(MessageType messageType, uint8_t 
                     throwTransportException("crypt setup data not valid");
                 }
 
-                logger.info("Set up cryptography for UDP transport. Sending UDP ping.");
+                logger.warn("Set up cryptography for UDP transport. Sending UDP ping.");
 
                 sendUdpPing();
 
             } else {
-                logger.info("Ignoring crypt setup message, because UDP is disabled.");
+                logger.warn("Ignoring crypt setup message, because UDP is disabled.");
             }
         }
             break;
         default: {
-            logger.debug("Calling external ProcessControlMessageFunction.");
+            logger.warn("Calling external ProcessControlMessageFunction.");
             processMessageFunction(messageType, buffer, length);
         }
             break;
@@ -540,10 +540,10 @@ void mumlib::Transport::sendEncodedAudioPacket(uint8_t *buffer, int length) {
     }
 
     if (udpActive) {
-        logger.info("Sending %d B of audio data via UDP.", length);
+        //logger.warn("Sending %d B of audio data via UDP.", length);
         sendUdpAsync(buffer, length);
     } else {
-        logger.info("Sending %d B of audio data via TCP.", length);
+        //logger.warn("Sending %d B of audio data via TCP.", length);
 
         const uint16_t netUdptunnelType = htons(static_cast<uint16_t>(MessageType::UDPTUNNEL));
 
@@ -557,7 +557,7 @@ void mumlib::Transport::sendEncodedAudioPacket(uint8_t *buffer, int length) {
         memcpy(packetBuff + sizeof(netUdptunnelType), &netLength, sizeof(netLength));
         memcpy(packetBuff + sizeof(netUdptunnelType) + sizeof(netLength), buffer, static_cast<size_t>(length));
 
-        sendSslAsync(packetBuff, length + sizeof(netUdptunnelType) + sizeof(netLength));
+        sendSsl(packetBuff, length + sizeof(netUdptunnelType) + sizeof(netLength));
     }
 }
 
@@ -569,6 +569,7 @@ void mumlib::Transport::processAudioPacket(uint8_t *buff, int length) {
         case AudioPacketType::CELT_Beta:
         case AudioPacketType::OPUS:
             processEncodedAudioPacketFunction(type, buff, length);
+            logger.warn("audio typehex: 0x%2x typedec: %d", buff[0], type);
             break;
         case AudioPacketType::Ping:
             break;
