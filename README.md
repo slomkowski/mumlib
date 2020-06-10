@@ -21,6 +21,7 @@ Todo:
 * Opus library
 * Google Protobuf: libraries and compiler
 * CMake
+* Speex DSP Library
 
 ## Build
 
