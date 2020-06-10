@@ -3,6 +3,10 @@
 #include "mumlib/Callback.hpp"
 #include "mumlib/enums.hpp"
 
+#ifdef __MSYS__
+#define __MSABI_LONG(x) x
+#endif
+
 #include <boost/asio.hpp>
 #include <boost/noncopyable.hpp>
 
@@ -88,7 +92,7 @@ namespace mumlib {
         void sendUserState(mumlib::UserState state, bool val);
 
         void sendUserState(mumlib::UserState state, std::string value);
-        
+
     private:
         _Mumlib_Private *impl;
 
