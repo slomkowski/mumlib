@@ -2,16 +2,16 @@
 
 # mumlib - simple Mumble client library
 
-Fairy simple Mumble library written in C++, using *boost::asio* asynchronous networking framework. Library supports:
+Fairly simple Mumble library written in C++, using *boost::asio* asynchronous networking framework. Library supports:
 
-* audio streaming through TCP and UDP channel
-* text messaging
+* Audio streaming through TCP and UDP channel
+* Text messaging
 
 Todo:
 
-* channel support
-* user information
-* remaining server messages (ACL, user stats etc)
+* Channel support
+* User information
+* Remaining server messages (ACL, user stats etc)
 
 ## Dependencies
 
@@ -21,7 +21,7 @@ Todo:
 * Opus library
 * Google Protobuf: libraries and compiler
 * CMake
-* Speex DSP Library
+* Speex DSP library
 
 Install those dependencies on Debian GNU/Linux using:
 ```
