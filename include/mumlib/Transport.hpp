@@ -94,7 +94,11 @@ namespace mumlib {
 
         ProcessEncodedAudioPacketFunction processEncodedAudioPacketFunction;
 
+#ifdef __MSYS__
+        bool noUdp;
+#else
         const bool noUdp;
+#endif
 
         volatile bool udpActive;
 

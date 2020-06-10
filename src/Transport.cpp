@@ -67,6 +67,9 @@ void mumlib::Transport::connect(
     connectionParams = make_pair(host, port);
     credentials = make_pair(user, password);
 
+#ifdef __MSYS__
+    noUdp = true;
+#endif
     udpActive = false;
 
     logger.warn("Verify_mode");
@@ -234,7 +237,7 @@ void mumlib::Transport::sslConnectHandler(const boost::system::error_code &error
                                               boost::asio::placeholders::error));
     }
     else {
-        throwTransportException((boost::format("sslConnectHandler: Connect failed: %s.") % error.message()).str()); 
+        throwTransportException((boost::format("sslConnectHandler: Connect failed: %s.") % error.message()).str());
     }
 }
 
@@ -362,7 +365,7 @@ void mumlib::Transport::processMessageInternal(MessageType messageType, uint8_t 
     switch (messageType) {
 
         case MessageType::UDPTUNNEL: {
-            logger.warn("Received %d B of encoded audio data via TCP.", length);
+            //logger.warn("Received %d B of encoded audio data via TCP.", length);
             processAudioPacket(buffer, length);
         }
             break;
