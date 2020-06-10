@@ -84,6 +84,7 @@ namespace mumlib {
 
                     // auto status = audio.decodeOpusPayload(incomingAudioPacket.audioPayload,
                     //                                       incomingAudioPacket.audioPayloadLength,
+                    //                                       incomingAudioPacket.sessionId,
                     //                                       pcmData,
                     //                                       5000);
 
@@ -96,7 +97,7 @@ namespace mumlib {
                                 status.first);
                     
                 } else {
-                    logger.warn("Incoming audio packet doesn't contain Opus data, calling unsupportedAudio callback.");
+                    logger.warn("Incoming audio packet doesn't contain Opus data, calling unsupportedAudio callback. Type: %d", type);
                     callback.unsupportedAudio(incomingAudioPacket.target,
                                               incomingAudioPacket.sessionId,
                                               incomingAudioPacket.sequenceNumber,
