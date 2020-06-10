@@ -25,7 +25,7 @@ Todo:
 
 Install those dependencies on Debian GNU/Linux using:
 ```
-sudo apt install libboost-dev libssl-dev liblog4cpp5-dev libopus-dev protobuf-compiler libspeexdsp-dev
+apt install libboost{,-system}-dev libssl-dev liblog4cpp5-dev libopus-dev protobuf-compiler libspeexdsp-dev cmake build-essential
 ```
 
 ## Build
