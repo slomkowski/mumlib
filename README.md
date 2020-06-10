@@ -23,6 +23,11 @@ Todo:
 * CMake
 * Speex DSP Library
 
+Install those dependencies on Debian GNU/Linux using:
+```
+sudo apt install libboost-dev libssl-dev liblog4cpp5-dev libopus-dev protobuf-compiler libspeexdsp-dev
+```
+
 ## Build
 
 The library uses CMake build system:
