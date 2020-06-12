@@ -13,19 +13,26 @@ endif()
 
 INCLUDE(FindPkgConfig)
 find_package(PkgConfig REQUIRED)
-#find_package(Boost COMPONENTS system REQUIRED)
+
+if (NOT APPLE)
+find_package(Boost COMPONENTS system REQUIRED)
+endif()
+
 find_package(OpenSSL REQUIRED)
 find_package(Protobuf REQUIRED)
 
 pkg_check_modules(LOG4CPP "log4cpp")
 pkg_check_modules(OPUS "opus")
 
-#INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIR})
+if (MSYS)
+include_directories(~/boost_1_72_0)
+elseif (NOT APPLE)
+INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIR})
+endif()
 
 include_directories(${OPENSSL_INCLUDE_DIR})
 include_directories(${PROTOBUF_INCLUDE_DIRS})
 include_directories(${OPUS_INCLUDE_DIRS})
-include_directories(~/boost_1_72_0)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 include_directories(${LOG4CPP_INCLUDE_DIRS})
 include_directories(include)
@@ -70,7 +77,8 @@ target_link_libraries(mumlib
         ${PROTOBUF_LIBRARIES}
         ${OPENSSL_LIBRARIES}
         ${LOG4CPP_LIBRARIES}
-        ${OPUS_LIBRARIES})
+        ${OPUS_LIBRARIES}
+        ${Boost_LIBRARIES})
 endif ()
 
 set_target_properties(mumlib PROPERTIES PUBLIC_HEADER "${MUMLIB_PUBLIC_HEADERS}")
