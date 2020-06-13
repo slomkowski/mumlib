@@ -14,7 +14,7 @@ endif()
 INCLUDE(FindPkgConfig)
 find_package(PkgConfig REQUIRED)
 
-if (NOT APPLE)
+if (NOT MSYS)
 find_package(Boost COMPONENTS system REQUIRED)
 endif()
 
