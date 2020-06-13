@@ -23,10 +23,10 @@ int64_t mumlib::VarInt::parseVariant(const uint8_t *buffer) {
             case 0xF0:
                 return buffer[1] << 24 | buffer[2] << 16 | buffer[3] << 8 | buffer[4];
             case 0xF4:
-                throw VarIntException("currently unsupported 8-byte varint size");
+                //throw VarIntException("currently unsupported 8-byte varint size");
             case 0xF8:
             case 0xFC:
-                throw VarIntException("currently negative varints aren't supported");
+                //throw VarIntException("currently negative varints aren't supported");
             default:
                 break;
         }
@@ -37,7 +37,7 @@ int64_t mumlib::VarInt::parseVariant(const uint8_t *buffer) {
     }
 
 
-    throw VarIntException("invalid varint");
+    //throw VarIntException("invalid varint");
 }
 
 std::vector<uint8_t> mumlib::VarInt::getEncoded() const {
