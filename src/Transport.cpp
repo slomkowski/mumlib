@@ -573,10 +573,10 @@ void mumlib::Transport::sendEncodedAudioPacket(uint8_t *buffer, int length) {
     }
 
     if (udpActive) {
-        logger.warn("Sending %d B of audio data via UDP.", length);
+        //logger.warn("Sending %d B of audio data via UDP.", length);
         sendUdpAsync(buffer, length);
     } else {
-        logger.warn("Sending %d B of audio data via TCP.", length);
+        //logger.warn("Sending %d B of audio data via TCP.", length);
 
         const uint16_t netUdptunnelType = htons(static_cast<uint16_t>(MessageType::UDPTUNNEL));
 
