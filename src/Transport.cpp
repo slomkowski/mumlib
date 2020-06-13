@@ -71,6 +71,7 @@ void mumlib::Transport::connect(
     noUdp = true;
 #endif
     udpActive = false;
+    state = ConnectionState::IN_PROGRESS;
 
     logger.warn("Verify_mode");
     sslSocket.set_verify_mode(boost::asio::ssl::verify_peer);
@@ -112,6 +113,8 @@ void mumlib::Transport::connect(
 
 void mumlib::Transport::disconnect()
 {
+    ioService.stop();
+
     if (state != ConnectionState::NOT_CONNECTED) {
         boost::system::error_code errorCode;
 
@@ -130,6 +133,7 @@ void mumlib::Transport::disconnect()
     }
 
     printf("Disconnected\n");
+    std::this_thread::sleep_for(std::chrono::seconds(5));
 }
 
 void mumlib::Transport::sendVersion() {
@@ -195,7 +199,7 @@ void mumlib::Transport::doReceiveUdp()
                     //logger.warn("Received UDP packet of %d B.", bytesTransferred);
 
                     if (not cryptState.isValid()) {
-                        throwTransportException("received UDP packet before CRYPT SETUP message");
+                        throwTransportException("received UDP packet before: CRYPT SETUP message");
                     } else {
                         lastReceivedUdpPacketTimestamp = std::chrono::system_clock::now();
 
@@ -211,7 +215,7 @@ void mumlib::Transport::doReceiveUdp()
                                 udpIncomingBuffer, plainBuffer, static_cast<unsigned int>(bytesTransferred));
 
                         if (not success) {
-                            throwTransportException("UDP packet decryption failed");
+                            throwTransportException("UDP packet: decryption failed");
                         }
 
                         processAudioPacket(plainBuffer, plainBufferLength);
@@ -237,7 +241,7 @@ void mumlib::Transport::sslConnectHandler(const boost::system::error_code &error
                                               boost::asio::placeholders::error));
     }
     else {
-        throwTransportException((boost::format("sslConnectHandler: Connect failed: %s.") % error.message()).str());
+        disconnect();
     }
 }
 
@@ -272,17 +276,14 @@ void mumlib::Transport::pingTimerTick(const boost::system::error_code &e) {
 
                 if (lastUdpReceivedMilliseconds > PING_INTERVAL.total_milliseconds() + 1000) {
                     logger.warn("Didn't receive UDP ping in %d ms, falling back to TCP.", lastUdpReceivedMilliseconds);
-                    throwTransportException("pingTimerTick: Didn't receive UDP ping");
-                    return;
                 }
             }
         }
     }
 
     if ((state == ConnectionState::NOT_CONNECTED) && (ping_state == PingState::PING)) {
-        logger.warn("ioService RESET!.");
-        throwTransportException("pingTimerTick: NOT CONNECTED PING");
-        return;
+        logger.warn("pingTimerTick disconnect!.");
+        disconnect();
     }
 
     logger.warn("TimerTick!.");
@@ -292,7 +293,7 @@ void mumlib::Transport::pingTimerTick(const boost::system::error_code &e) {
 
 void mumlib::Transport::sendUdpAsync(uint8_t *buff, int length) {
     if (length > MAX_UDP_LENGTH - 4) {
-        throwTransportException("maximum allowed data length is %d" + to_string(MAX_UDP_LENGTH - 4));
+        throwTransportException("maximum allowed: data length is %d" + to_string(MAX_UDP_LENGTH - 4));
     }
 
     auto *encryptedMsgBuff = asyncBufferPool.malloc();
@@ -432,7 +433,7 @@ void mumlib::Transport::processMessageInternal(MessageType messageType, uint8_t 
                 if (cryptsetup.client_nonce().length() != AES_BLOCK_SIZE
                     or cryptsetup.server_nonce().length() != AES_BLOCK_SIZE
                     or cryptsetup.key().length() != AES_BLOCK_SIZE) {
-                    throwTransportException("one of cryptographic parameters has invalid length");
+                    throwTransportException("one of cryptographic: parameters has invalid length");
                 }
 
                 cryptState.setKey(
@@ -441,7 +442,7 @@ void mumlib::Transport::processMessageInternal(MessageType messageType, uint8_t 
                         reinterpret_cast<const unsigned char *>(cryptsetup.server_nonce().c_str()));
 
                 if (not cryptState.isValid()) {
-                    throwTransportException("crypt setup data not valid");
+                    throwTransportException("crypt setup: data not valid");
                 }
 
                 logger.warn("Set up cryptography for UDP transport. Sending UDP ping.");
@@ -572,10 +573,10 @@ void mumlib::Transport::sendEncodedAudioPacket(uint8_t *buffer, int length) {
     }
 
     if (udpActive) {
-        //logger.warn("Sending %d B of audio data via UDP.", length);
+        logger.warn("Sending %d B of audio data via UDP.", length);
         sendUdpAsync(buffer, length);
     } else {
-        //logger.warn("Sending %d B of audio data via TCP.", length);
+        logger.warn("Sending %d B of audio data via TCP.", length);
 
         const uint16_t netUdptunnelType = htons(static_cast<uint16_t>(MessageType::UDPTUNNEL));
 
