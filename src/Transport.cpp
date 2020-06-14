@@ -2,6 +2,7 @@
 
 #include "Mumble.pb.h"
 
+#include <boost/array.hpp>
 #include <boost/format.hpp>
 
 using namespace std;
@@ -67,9 +68,6 @@ void mumlib::Transport::connect(
     connectionParams = make_pair(host, port);
     credentials = make_pair(user, password);
 
-#ifdef __MSYS__
-    noUdp = true;
-#endif
     udpActive = false;
     state = ConnectionState::IN_PROGRESS;
 
@@ -91,6 +89,9 @@ void mumlib::Transport::connect(
             ip::udp::resolver::query queryUdp(ip::udp::v4(), host, to_string(port));
             udpReceiverEndpoint = *resolverUdp.resolve(queryUdp);
             udpSocket.open(ip::udp::v4());
+
+            boost::array<char, 1> send_buf  = { 0 };
+            udpSocket.send_to(boost::asio::buffer(send_buf), udpReceiverEndpoint);
 
             doReceiveUdp();
             logger.warn("noUdp try");
