@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8.0)
 project(mumlib)
 
 if (MSYS)
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -DLOG4CPP_FIX_ERROR_COLLISION=1 -D__USE_W32_SOCKETS")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -O3 -DLOG4CPP_FIX_ERROR_COLLISION=1 -D__USE_W32_SOCKETS -static-libstdc++ -static-libgcc -static")
   add_definitions(-DOPT_TLS_OPENSSL)
 elseif (NOT APPLE)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -O3")
@@ -70,7 +70,7 @@ target_link_libraries(mumlib
         ${PROTOBUF_LIBRARIES}
         ${OPENSSL_LIBRARIES}
         ${LOG4CPP_LIBRARIES}
-        ${OPUS_LIBRARIES} ws2_32)
+        ${OPUS_LIBRARIES} ws2_32 winmm z crypto ssl)
 else ()
 target_link_libraries(mumlib
         ${SPEEX_LIBRARIES}
