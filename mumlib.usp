@@ -27,14 +27,11 @@
 				<Option type="2" />
 				<Option compiler="gcc" />
 				<Compiler>
-					<Add option="-march=pentium4" />
 					<Add option="-O2" />
 					<Add option="-Wall" />
 				</Compiler>
 				<Linker>
 					<Add option="-s" />
-					<Add option="-static-libstdc++" />
-					<Add option="-static-libgcc" />
 					<Add option="-static" />
 					<Add library="user32" />
 				</Linker>
@@ -43,11 +40,21 @@
 		<Compiler>
 			<Add option="-Wall" />
 			<Add option="-std=c++11" />
-			<Add option="-pthread" />
+			<Add option="-Wno-unused-variable" />
+			<Add option="-Wno-sign-compare" />
+			<Add option="-Wno-sequence-point" />
+			<Add option="-Wno-format" />
+			<Add option="-Wno-unused-but-set-variable" />
+			<Add option="-Wno-cpp" />
+			<Add option="-Wno-return-type" />
+			<Add option="-Wno-deprecated-declarations" />
+			<Add option="-Wno-reorder" />
+			<Add option="-msse" />
 			<Add option="-D__USE_W32_SOCKETS" />
 			<Add option="-DLOG4CPP_FIX_ERROR_COLLISION=1" />
+			<Add option="-D__URUSSTUDIO__" />
 			<Add directory="include" />
-			<Add directory="$(#URUSPATH)/home/urus/boost_1_72_0" />
+			<Add directory="$(HOME)/boost_1_72_0" />
 			<Add directory="../mumlib" />
 		</Compiler>
 		<Linker>
@@ -74,8 +81,8 @@
 			<Add library="protobuf" />
 			<Add library="ws2_32" />
 		</Linker>
-		<Unit filename="Mumble.pb.cc" />
-		<Unit filename="Mumble.pb.h" />
+		<Unit filename="Mumble.pb-msys.cc" />
+		<Unit filename="Mumble.pb-msys.h" />
 		<Unit filename="include/mumlib.hpp" />
 		<Unit filename="include/mumlib/Audio.hpp" />
 		<Unit filename="include/mumlib/Callback.hpp" />
