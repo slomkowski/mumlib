@@ -11,7 +11,11 @@
 #include <openssl/sha.h>
 #include <log4cpp/Category.hh>
 
-#include <Mumble.pb.h>
+#if defined(__MSYS__) && defined(__URUSSTUDIO__)
+#include "Mumble.pb-msys.h"
+#else
+#include "Mumble.pb.h"
+#endif
 
 using namespace std;
 using namespace boost::asio;
@@ -76,7 +80,7 @@ namespace mumlib {
                 if (type == AudioPacketType::OPUS) {
                     int16_t pcmData[5000];
 
-                    audio.addFrameToBuffer(incomingAudioPacket.audioPayload, 
+                    audio.addFrameToBuffer(incomingAudioPacket.audioPayload,
                                         incomingAudioPacket.audioPayloadLength,
                                         seq);
 
@@ -95,7 +99,7 @@ namespace mumlib {
                                 incomingAudioPacket.sequenceNumber,
                                 pcmData,
                                 status.first);
-                    
+
                 } else {
                     logger.warn("Incoming audio packet doesn't contain Opus data, calling unsupportedAudio callback. Type: %d", type);
                     callback.unsupportedAudio(incomingAudioPacket.target,
@@ -147,7 +151,7 @@ namespace mumlib {
                 case MessageType::CHANNELREMOVE: {
                     MumbleProto::ChannelRemove channelRemove;
                     channelRemove.ParseFromArray(buffer, length);
-                    
+
                     if(isListChannelContains(channelRemove.channel_id())) {
                         listChannelRemovedBy(channelRemove.channel_id());
                     }
@@ -189,7 +193,7 @@ namespace mumlib {
 
                     if(not isListChannelContains(channel_id)) {
                         listMumbleChannel.push_back(mumbleChannel);
-                    } 
+                    }
 
                     callback.channelState(
                             channelState.name(),
@@ -389,7 +393,7 @@ namespace mumlib {
 
         bool isListUserContains(int sessionId) {
             for(int i = 0; i < listMumbleUser.size(); i++)
-                if(listMumbleUser[i].sessionId == sessionId) 
+                if(listMumbleUser[i].sessionId == sessionId)
                     return true;
             return false;
         }
@@ -536,7 +540,7 @@ namespace mumlib {
     void Mumlib::sendVoiceTarget(int targetId, VoiceTargetType type, string name, int &error) {
         int id;
         switch(type) {
-            case VoiceTargetType::CHANNEL: 
+            case VoiceTargetType::CHANNEL:
                 id = getChannelIdBy(name);
                 break;
             case VoiceTargetType::USER:
@@ -544,7 +548,7 @@ namespace mumlib {
                 break;
             default:
                 break;
-        }        
+        }
         error = id < 0 ? 1: 0;
         if(error) return;
         sendVoiceTarget(targetId, type, id);
@@ -585,7 +589,7 @@ namespace mumlib {
 
     void Mumlib::sendUserState(mumlib::UserState field, std::string val) {
         MumbleProto::UserState userState;
-        
+
         // if comment longer than 128 bytes, we need to set the SHA1 hash
         // http://www.askyb.com/cpp/openssl-sha1-hashing-example-in-cpp/
         unsigned char digest[SHA_DIGEST_LENGTH];
@@ -594,7 +598,7 @@ namespace mumlib {
         SHA1((unsigned char*) val.c_str(), val.size(), digest);
         for(int i = 0; i < SHA_DIGEST_LENGTH; i++)
             sprintf(&mdString[i*2], "%02x", (unsigned int) digest[i]);
-	
+
         switch (field) {
             case UserState::COMMENT:
                 if(val.size() < 128)

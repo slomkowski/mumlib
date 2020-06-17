@@ -1,6 +1,10 @@
 #include "mumlib/Transport.hpp"
 
+#if defined(__MSYS__) && defined(__URUSSTUDIO__)
+#include "Mumble.pb-msys.h"
+#else
 #include "Mumble.pb.h"
+#endif
 
 #include <boost/array.hpp>
 #include <boost/format.hpp>
