@@ -44,3 +44,6 @@ release
 *.depend
 *cscope_file_list
 bin
+Mumble.pb.cc
+Mumble.pb.h
+
