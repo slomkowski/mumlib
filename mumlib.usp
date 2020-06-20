@@ -6,7 +6,8 @@
 		<Option pch_mode="2" />
 		<Option compiler="gcc" />
 		<Build>
-			<Target title="Debug">
+			<Target title="Debug_win32">
+				<Option platforms="Windows;" />
 				<Option output="bin/Debug/mumlib" prefix_auto="1" extension_auto="1" />
 				<Option working_dir="" />
 				<Option object_output="obj/Debug/" />
@@ -14,13 +15,84 @@
 				<Option compiler="gcc" />
 				<Compiler>
 					<Add option="-Wall" />
-					<Add option="-g" />
+					<Add option="-std=c++11" />
+					<Add option="-Wno-unused-variable" />
+					<Add option="-Wno-sign-compare" />
+					<Add option="-Wno-sequence-point" />
+					<Add option="-Wno-format" />
+					<Add option="-Wno-unused-but-set-variable" />
+					<Add option="-Wno-cpp" />
+					<Add option="-Wno-return-type" />
+					<Add option="-Wno-deprecated-declarations" />
+					<Add option="-Wno-reorder" />
+					<Add option="-msse" />
+					<Add option="-D__USE_W32_SOCKETS" />
+					<Add option="-DLOG4CPP_FIX_ERROR_COLLISION=1" />
+					<Add directory="include" />
+					<Add directory="$(HOME)/boost_1_72_0" />
+					<Add directory="../mumlib" />
 				</Compiler>
 				<Linker>
+					<Add library="opus" />
+					<Add library="log4cpp" />
+					<Add library="speexdsp" />
+					<Add library="shfolder" />
+					<Add library="gdi32" />
+					<Add library="kernel32" />
 					<Add library="user32" />
+					<Add library="winmm" />
+					<Add library="comdlg32" />
+					<Add library="winspool" />
+					<Add library="comctl32" />
+					<Add library="odbc32" />
+					<Add library="ole32" />
+					<Add library="oleaut32" />
+					<Add library="uuid" />
+					<Add library="rpcrt4" />
+					<Add library="advapi32" />
+					<Add library="wsock32" />
+					<Add library="ssl" />
+					<Add library="crypto" />
+					<Add library="protobuf" />
+					<Add library="ws2_32" />
 				</Linker>
 			</Target>
-			<Target title="Release">
+			<Target title="Release_win32">
+				<Option platforms="Windows;" />
+				<Option output="bin/Release/mumlib" prefix_auto="1" extension_auto="1" />
+				<Option working_dir="" />
+				<Option object_output="obj/Release/" />
+				<Option type="2" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-O2" />
+					<Add option="-Wall" />
+					<Add option="-D__USE_W32_SOCKETS" />
+					<Add option="-DLOG4CPP_FIX_ERROR_COLLISION=1" />
+				</Compiler>
+				<Linker>
+					<Add option="-s" />
+					<Add option="-static" />
+					<Add library="user32" />
+					<Add library="shfolder" />
+					<Add library="gdi32" />
+					<Add library="kernel32" />
+					<Add library="winmm" />
+					<Add library="comdlg32" />
+					<Add library="winspool" />
+					<Add library="comctl32" />
+					<Add library="odbc32" />
+					<Add library="ole32" />
+					<Add library="oleaut32" />
+					<Add library="uuid" />
+					<Add library="rpcrt4" />
+					<Add library="advapi32" />
+					<Add library="wsock32" />
+					<Add library="ws2_32" />
+				</Linker>
+			</Target>
+			<Target title="Release_unix">
+				<Option platforms="Unix;Mac;" />
 				<Option output="bin/Release/mumlib" prefix_auto="1" extension_auto="1" />
 				<Option working_dir="" />
 				<Option object_output="obj/Release/" />
@@ -33,8 +105,25 @@
 				<Linker>
 					<Add option="-s" />
 					<Add option="-static" />
-					<Add library="user32" />
 				</Linker>
+				<ExtraCommands>
+					<Add before="protoc --cpp_out=. Mumble.proto" />
+				</ExtraCommands>
+			</Target>
+			<Target title="Debug_unix">
+				<Option platforms="Unix;Mac;" />
+				<Option output="bin/Debug/mumlib" prefix_auto="1" extension_auto="1" />
+				<Option working_dir="" />
+				<Option object_output="obj/Debug/" />
+				<Option type="2" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-Wall" />
+					<Add option="-g" />
+				</Compiler>
+				<ExtraCommands>
+					<Add before="protoc --cpp_out=. Mumble.proto" />
+				</ExtraCommands>
 			</Target>
 		</Build>
 		<Compiler>
@@ -50,8 +139,6 @@
 			<Add option="-Wno-deprecated-declarations" />
 			<Add option="-Wno-reorder" />
 			<Add option="-msse" />
-			<Add option="-D__USE_W32_SOCKETS" />
-			<Add option="-DLOG4CPP_FIX_ERROR_COLLISION=1" />
 			<Add option="-D__URUSSTUDIO__" />
 			<Add directory="include" />
 			<Add directory="$(HOME)/boost_1_72_0" />
@@ -61,28 +148,26 @@
 			<Add library="opus" />
 			<Add library="log4cpp" />
 			<Add library="speexdsp" />
-			<Add library="shfolder" />
-			<Add library="gdi32" />
-			<Add library="kernel32" />
-			<Add library="user32" />
-			<Add library="winmm" />
-			<Add library="comdlg32" />
-			<Add library="winspool" />
-			<Add library="comctl32" />
-			<Add library="odbc32" />
-			<Add library="ole32" />
-			<Add library="oleaut32" />
-			<Add library="uuid" />
-			<Add library="rpcrt4" />
-			<Add library="advapi32" />
-			<Add library="wsock32" />
 			<Add library="ssl" />
 			<Add library="crypto" />
 			<Add library="protobuf" />
-			<Add library="ws2_32" />
 		</Linker>
-		<Unit filename="Mumble.pb-msys.cc" />
-		<Unit filename="Mumble.pb-msys.h" />
+		<Unit filename="Mumble.pb-msys.cc">
+			<Option target="Debug_win32" />
+			<Option target="Release_win32" />
+		</Unit>
+		<Unit filename="Mumble.pb-msys.h">
+			<Option target="Debug_win32" />
+			<Option target="Release_win32" />
+		</Unit>
+		<Unit filename="Mumble.pb.cc">
+			<Option target="Release_unix" />
+			<Option target="Debug_unix" />
+		</Unit>
+		<Unit filename="Mumble.pb.h">
+			<Option target="Release_unix" />
+			<Option target="Debug_unix" />
+		</Unit>
 		<Unit filename="include/mumlib.hpp" />
 		<Unit filename="include/mumlib/Audio.hpp" />
 		<Unit filename="include/mumlib/Callback.hpp" />
