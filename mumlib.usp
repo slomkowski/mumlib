@@ -129,6 +129,7 @@
 		<Compiler>
 			<Add option="-Wall" />
 			<Add option="-std=c++11" />
+			<Add option="-fPIC" />
 			<Add option="-Wno-unused-variable" />
 			<Add option="-Wno-sign-compare" />
 			<Add option="-Wno-sequence-point" />
