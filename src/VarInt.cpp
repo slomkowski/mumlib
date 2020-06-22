@@ -36,7 +36,7 @@ int64_t mumlib::VarInt::parseVariant(const uint8_t *buffer) {
         return (v & 0x1F) << 16 | buffer[1] << 8 | buffer[2];
     }
 
-
+    return 0;
     //throw VarIntException("invalid varint");
 }
 
