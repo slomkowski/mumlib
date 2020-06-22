@@ -138,7 +138,7 @@ void mumlib::Transport::disconnect()
     }
 
     printf("Disconnected\n");
-    std::this_thread::sleep_for(std::chrono::seconds(5));
+    std::this_thread::sleep_for(std::chrono::seconds(3));
 }
 
 void mumlib::Transport::sendVersion() {
