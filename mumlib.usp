@@ -15,17 +15,6 @@
 				<Option compiler="gcc" />
 				<Compiler>
 					<Add option="-Wall" />
-					<Add option="-std=c++11" />
-					<Add option="-Wno-unused-variable" />
-					<Add option="-Wno-sign-compare" />
-					<Add option="-Wno-sequence-point" />
-					<Add option="-Wno-format" />
-					<Add option="-Wno-unused-but-set-variable" />
-					<Add option="-Wno-cpp" />
-					<Add option="-Wno-return-type" />
-					<Add option="-Wno-deprecated-declarations" />
-					<Add option="-Wno-reorder" />
-					<Add option="-msse" />
 					<Add option="-D__USE_W32_SOCKETS" />
 					<Add option="-DLOG4CPP_FIX_ERROR_COLLISION=1" />
 					<Add directory="include" />
@@ -50,7 +39,6 @@
 					<Add library="uuid" />
 					<Add library="rpcrt4" />
 					<Add library="advapi32" />
-					<Add library="wsock32" />
 					<Add library="ssl" />
 					<Add library="crypto" />
 					<Add library="protobuf" />
@@ -71,24 +59,16 @@
 					<Add option="-DLOG4CPP_FIX_ERROR_COLLISION=1" />
 				</Compiler>
 				<Linker>
-					<Add option="-s" />
-					<Add option="-static" />
-					<Add library="user32" />
-					<Add library="shfolder" />
-					<Add library="gdi32" />
-					<Add library="kernel32" />
+					<Add option="-Wl,--enable-auto-image-base" />
+					<Add option="-Wl,--enable-auto-import" />
+					<Add option="-Wl,--export-all-symbols" />
+					<Add option="-Wl,--add-stdcall-alias" />
+					<Add option="-Wl,--no-undefined" />
+					<Add option="-mthreads" />
 					<Add library="winmm" />
-					<Add library="comdlg32" />
-					<Add library="winspool" />
-					<Add library="comctl32" />
-					<Add library="odbc32" />
-					<Add library="ole32" />
-					<Add library="oleaut32" />
-					<Add library="uuid" />
-					<Add library="rpcrt4" />
-					<Add library="advapi32" />
-					<Add library="wsock32" />
 					<Add library="ws2_32" />
+					<Add library="crypto" />
+					<Add library="ssl" />
 				</Linker>
 			</Target>
 			<Target title="Release_unix">
@@ -138,20 +118,12 @@
 			<Add option="-Wno-return-type" />
 			<Add option="-Wno-deprecated-declarations" />
 			<Add option="-Wno-reorder" />
-			<Add option="-ffunction-sections" />
-			<Add option="-fdata-sections" />
-			<Add option="-fsigned-char" />
 			<Add option="-Wpointer-arith" />
 			<Add option="-Wno-missing-field-initializers" />
 			<Add option="-Wno-unused-parameter" />
 			<Add option="-Wno-redundant-decls" />
 			<Add option="-Wno-unknown-pragmas" />
 			<Add option="-Wno-trigraphs" />
-			<Add option="-std=gnu++11" />
-			<Add option="-Werror=return-type" />
-			<Add option="-Werror=parentheses" />
-			<Add option="-Werror=ignored-qualifiers" />
-			<Add option="-Werror=narrowing" />
 			<Add option="-msse" />
 			<Add option="-D__URUSSTUDIO__" />
 			<Add directory="include" />
@@ -175,6 +147,8 @@
 			<Option target="Release_win32" />
 		</Unit>
 		<Unit filename="Mumble.pb.cc">
+			<Option compile="0" />
+			<Option link="0" />
 			<Option target="Release_unix" />
 			<Option target="Debug_unix" />
 		</Unit>
