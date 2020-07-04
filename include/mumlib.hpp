@@ -93,14 +93,13 @@ namespace mumlib {
 
         void sendUserState(mumlib::UserState state, std::string value);
 
+        bool isSessionIdValid(int sessionId);
     private:
         _Mumlib_Private *impl;
 
         int getChannelIdBy(std::string channelName);
 
         int getUserIdBy(std::string userName);
-
-        bool isSessionIdValid(int sessionId);
 
         bool isChannelIdValid(int channelId);
     };
