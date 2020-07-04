@@ -517,7 +517,7 @@ namespace mumlib {
     }
 
     void Mumlib::sendVoiceTarget(int targetId, VoiceTargetType type, int id) {
-        MumbleProto::VoiceTarget voiceTarget;
+        static MumbleProto::VoiceTarget voiceTarget;
         MumbleProto::VoiceTarget_Target voiceTargetTarget;
         switch(type) {
             case VoiceTargetType::CHANNEL: {
