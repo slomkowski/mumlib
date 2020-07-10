@@ -29,7 +29,7 @@ mumlib::Audio::Audio(int sampleRate, int bitrate, int channels)
           iChannels(channels) {
 
     int error, ret;
-    iFrameSize = sampleRate / 100;
+    iFrameSize = sampleRate / 1000 * 20;
     iAudioBufferSize = iFrameSize;
     iAudioBufferSize *= 12;
 
@@ -45,22 +45,22 @@ mumlib::Audio::Audio(int sampleRate, int bitrate, int channels)
     }
     ret = opus_encoder_ctl(opusEncoder, OPUS_SET_VBR(0));
     if (ret != OPUS_OK) {
-        throw AudioException((boost::format("failed to initialize variable bitrate: %s") 
+        throw AudioException((boost::format("failed to initialize variable bitrate: %s")
                             % opus_strerror(ret)).str());
     }
     ret = opus_encoder_ctl(opusEncoder, OPUS_SET_VBR_CONSTRAINT(0));
     if (ret != OPUS_OK) {
-        throw AudioException((boost::format("failed to initialize variable bitrate constraint: %s") 
+        throw AudioException((boost::format("failed to initialize variable bitrate constraint: %s")
                             % opus_strerror(ret)).str());
     }
     ret = opus_encoder_ctl(opusEncoder, OPUS_SET_BANDWIDTH(OPUS_BANDWIDTH_NARROWBAND));
     if (ret != OPUS_OK) {
-        throw AudioException((boost::format("failed to initialize bandwidth narrow: %s") 
+        throw AudioException((boost::format("failed to initialize bandwidth narrow: %s")
                             % opus_strerror(ret)).str());
     }
     ret = opus_encoder_ctl(opusEncoder, OPUS_SET_MAX_BANDWIDTH(OPUS_BANDWIDTH_NARROWBAND));
     if (ret != OPUS_OK) {
-        throw AudioException((boost::format("failed to initialize maximum bandwidth narrow: %s") 
+        throw AudioException((boost::format("failed to initialize maximum bandwidth narrow: %s")
                             % opus_strerror(ret)).str());
     }
 
@@ -139,7 +139,7 @@ void mumlib::Audio::addFrameToBuffer(uint8_t *inputBuffer, int inputLength, int 
     jbPacket.span = samples;
     jbPacket.timestamp = iFrameSize * sequence;
     jbPacket.user_data = lastPacket;
-        
+
     jitter_buffer_put(jbBuffer, &jbPacket);
 }
 
@@ -171,14 +171,14 @@ std::pair<int, bool> mumlib::Audio::decodeOpusPayload(int sessionId, int16_t *pc
         opusDecoder = CreateOpusDecoder(iSampleRate, iChannels);
     }
     if(opusDataLength) {
-        outputSize = opus_decode(opusDecoder, 
+        outputSize = opus_decode(opusDecoder,
                                     reinterpret_cast<const unsigned char *>(jbPacket.data),
-                                    jbPacket.len, 
-                                    pcmBuffer, 
+                                    jbPacket.len,
+                                    pcmBuffer,
                                     pcmBufferSize, 0);
     } else {
-        outputSize = opus_decode(opusDecoder, 
-                                    NULL, 0, pcmBuffer, pcmBufferSize, 0);        
+        outputSize = opus_decode(opusDecoder,
+                                    NULL, 0, pcmBuffer, pcmBufferSize, 0);
     }
 
     if(outputSize < 0) {
@@ -194,7 +194,7 @@ std::pair<int, bool> mumlib::Audio::decodeOpusPayload(int sessionId, int16_t *pc
     for (int i = outputSize / iFrameSize; i > 0; --i) {
         jitter_buffer_tick(jbBuffer);
     }
-    
+
     logger.debug("%d B of Opus data decoded to %d PCM samples, last packet: %d.",
                  opusDataLength, outputSize, lastPacket);
 
@@ -236,10 +236,10 @@ std::pair<int, bool>  mumlib::Audio::decodeOpusPayload(uint8_t *inputBuffer,
 
     // Issue #3 (Users speaking simultaneously)
     // https://mf4.xiph.org/jenkins/view/opus/job/opus/ws/doc/html/group__opus__decoder.html
-    // Opus is a stateful codec with overlapping blocks and as a result Opus packets are not coded independently of each other. 
-    // Packets must be passed into the decoder serially and in the correct order for a correct decode. 
+    // Opus is a stateful codec with overlapping blocks and as a result Opus packets are not coded independently of each other.
+    // Packets must be passed into the decoder serially and in the correct order for a correct decode.
     // Lost packets can be replaced with loss concealment by calling the decoder with a null pointer and zero length for the missing packet.
-    // A single codec state may only be accessed from a single thread at a time and any required locking must be performed by the caller. 
+    // A single codec state may only be accessed from a single thread at a time and any required locking must be performed by the caller.
     // Separate streams must be decoded with separate decoder states and can be decoded in parallel unless the library was compiled with NONTHREADSAFE_PSEUDOSTACK defined.
     auto *packet = reinterpret_cast<const unsigned char *>(&inputBuffer[dataPointer]);
     int frame = opus_packet_get_nb_frames(packet, opusDataLength);
