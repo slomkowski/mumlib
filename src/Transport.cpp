@@ -9,6 +9,8 @@
 #include <boost/array.hpp>
 #include <boost/format.hpp>
 
+#include <thread>
+
 using namespace std;
 
 static boost::posix_time::seconds PING_INTERVAL(4);
