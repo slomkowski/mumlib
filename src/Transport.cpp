@@ -186,7 +186,7 @@ void mumlib::Transport::sendSslPing() {
 
     ping.set_timestamp(std::time(nullptr));
 
-    logger.warn("Sending SSL ping.");
+    //logger.warn("Sending SSL ping.");
 
     sendControlMessagePrivate(MessageType::PING, ping);
 }
@@ -274,7 +274,7 @@ void mumlib::Transport::pingTimerTick(const boost::system::error_code &e) {
         if (not noUdp) {
             using namespace std::chrono;
 
-            logger.warn("pingTimerTick: Sending UDP ping.");
+            //logger.warn("pingTimerTick: Sending UDP ping.");
             sendUdpPing();
 
             if (udpActive) {
