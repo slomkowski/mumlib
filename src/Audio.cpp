@@ -160,6 +160,9 @@ std::pair<int, bool> mumlib::Audio::decodeOpusPayload(int sessionId, int16_t *pc
     int outputSize;
     spx_uint32_t lastPacket;
 
+    typedef std::numeric_limits<int16_t> rlimit;
+    float pcmbuf[pcmBufferSize];
+
     if(jitter_buffer_get(jbBuffer, &jbPacket, iFrameSize, &startofs) == JITTER_BUFFER_OK) {
         opusDataLength = jbPacket.len;
         lastPacket = jbPacket.user_data;
@@ -170,25 +173,30 @@ std::pair<int, bool> mumlib::Audio::decodeOpusPayload(int sessionId, int16_t *pc
     if (!opusDecoder) {
         opusDecoder = CreateOpusDecoder(iSampleRate, iChannels);
     }
+
     if(opusDataLength) {
-        outputSize = opus_decode(opusDecoder,
+        outputSize = opus_decode_float(opusDecoder,
                                     reinterpret_cast<const unsigned char *>(jbPacket.data),
                                     jbPacket.len,
-                                    pcmBuffer,
+                                    pcmbuf,
                                     pcmBufferSize, 0);
     } else {
-        outputSize = opus_decode(opusDecoder,
-                                    NULL, 0, pcmBuffer, pcmBufferSize, 0);
+        outputSize = opus_decode_float(opusDecoder,
+                                    NULL, 0, pcmbuf, pcmBufferSize, 0);
     }
 
     if(outputSize < 0) {
         outputSize = iFrameSize;
-        memset(pcmBuffer, 0, iFrameSize * sizeof(float));
+        memset(pcmbuf, 0, iFrameSize * sizeof(float));
     }
 
     if(lastPacket) {
         for(unsigned int i = 0; i < iFrameSize; i++)
-            pcmBuffer[i] *= fFadeOut[i];
+            pcmbuf[i] *= fFadeOut[i];
+    }
+
+    for (int i = 0; i < pcmBufferSize; i++) {
+        pcmBuffer[i] = pcmbuf[i] * rlimit::max();
     }
 
     for (int i = outputSize / iFrameSize; i > 0; --i) {
