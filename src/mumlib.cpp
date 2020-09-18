@@ -78,13 +78,14 @@ namespace mumlib {
                 auto incomingAudioPacket = audio.decodeIncomingAudioPacket(buffer, length);
 
                 if (type == AudioPacketType::OPUS) {
-                    int16_t pcmData[5000];
+                    int16_t frame_size = DEFAULT_OPUS_SAMPLE_RATE / 1000 * 20 * 8;
+                    int16_t pcmData[frame_size];
 
                     audio.addFrameToBuffer(incomingAudioPacket.audioPayload,
                                         incomingAudioPacket.audioPayloadLength,
                                         seq);
 
-                    auto status = audio.decodeOpusPayload(incomingAudioPacket.sessionId, pcmData, 5000);
+                    auto status = audio.decodeOpusPayload(incomingAudioPacket.sessionId, pcmData, frame_size);
 
                     // auto status = audio.decodeOpusPayload(incomingAudioPacket.audioPayload,
                     //                                       incomingAudioPacket.audioPayloadLength,
