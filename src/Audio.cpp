@@ -29,7 +29,7 @@ mumlib::Audio::Audio(int sampleRate, int bitrate, int channels)
           iChannels(channels) {
 
     int error, ret;
-    iFrameSize = sampleRate / 1000 * 20;
+    iFrameSize = sampleRate / 1000 * 10;
     iAudioBufferSize = iFrameSize;
     iAudioBufferSize *= 12;
 
