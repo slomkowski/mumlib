@@ -87,6 +87,7 @@
 				<Linker>
 					<Add option="-s" />
 					<Add option="-static" />
+					<Add option="-Wl,--gc-sections" />
 				</Linker>
 				<ExtraCommands>
 					<Add before="protoc --cpp_out=. Mumble.proto" />
@@ -101,8 +102,8 @@
 				<Option compiler="gcc" />
 				<Compiler>
 					<Add option="-Wall" />
-					<Add option="-g" />
 					<Add option="-std=gnu++11" />
+					<Add option="-g" />
 				</Compiler>
 				<ExtraCommands>
 					<Add before="protoc --cpp_out=. Mumble.proto" />
@@ -128,7 +129,18 @@
 			<Add option="-Wno-unknown-pragmas" />
 			<Add option="-Wno-trigraphs" />
 			<Add option="-msse" />
+			<Add option="-ffunction-sections" />
+			<Add option="-fdata-sections" />
 			<Add option="-D__URUSSTUDIO__" />
+			<Add option="-DBOOST_ASIO_DISABLE_BOOST_ARRAY=1" />
+			<Add option="-DBOOST_ASIO_DISABLE_BOOST_CHRONO=1" />
+			<Add option="-DBOOST_ASIO_DISABLE_BOOST_LIMITS=1" />
+			<Add option="-DBOOST_ASIO_DISABLE_BOOST_REGEX=1" />
+			<Add option="-DBOOST_ASIO_DISABLE_BOOST_STATIC_CONSTANT=1" />
+			<Add option="-DBOOST_ASIO_DISABLE_BOOST_ASSERT=1" />
+			<Add option="-DBOOST_ASIO_DISABLE_BOOST_THROW_EXCEPTION=1" />
+			<Add option="-DBOOST_ASIO_DISABLE_BOOST_WORKAROUND=1" />
+			<Add option="-DBOOST_ERROR_CODE_HEADER_ONLY" />
 			<Add directory="include" />
 			<Add directory="$(HOME)/boost_1_72_0" />
 			<Add directory="../mumlib" />
@@ -171,9 +183,6 @@
 		<Unit filename="src/VarInt.cpp" />
 		<Unit filename="src/mumlib.cpp" />
 		<Extensions>
-			<code_completion />
-			<envvars />
-			<debugger />
 			<lib_finder disable_auto="1" />
 		</Extensions>
 	</Project>
