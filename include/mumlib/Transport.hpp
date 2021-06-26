@@ -14,6 +14,7 @@
 #include <google/protobuf/message.h>
 
 #include <chrono>
+#include <utility>
 
 namespace mumlib {
 
@@ -30,7 +31,19 @@ namespace mumlib {
 
     class TransportException : public MumlibException {
     public:
-        TransportException(string message) : MumlibException(message) { }
+        TransportException(string message) : MumlibException(std::move(message)) { }
+    };
+
+    /* This helper is needed because the sslContext and sslSocket are initialized in
+     * the Transport constructor and there wasn't an easier way of passing these two
+     * arguments.
+     * TODO: add support for password callback.
+     */
+    class SslContextHelper : boost::noncopyable {
+        public:
+            SslContextHelper(boost::asio::ssl::context &ctx,
+                    std::string cert_file, std::string privkey_file);
+            ~SslContextHelper() { };
     };
 
     class Transport : boost::noncopyable {
@@ -38,7 +51,9 @@ namespace mumlib {
         Transport(io_service &ioService,
                   ProcessControlMessageFunction processControlMessageFunc,
                   ProcessEncodedAudioPacketFunction processEncodedAudioPacketFunction,
-                  bool noUdp = false);
+                  bool noUdp = false,
+                  std::string cert_file = "",
+                  std::string privkey_file = "");
 
         ~Transport();
 
@@ -46,6 +61,13 @@ namespace mumlib {
                      int port,
                      string user,
                      string password);
+
+        void connect(string host,
+                     int port,
+                     string user,
+                     string password,
+                     string cert_file,
+                     string privkey_file);
 
         void disconnect();
 
@@ -72,11 +94,16 @@ namespace mumlib {
 
         ProcessEncodedAudioPacketFunction processEncodedAudioPacketFunction;
 
+#ifdef __MSYS__
+        bool noUdp;
+#else
         const bool noUdp;
+#endif
 
         volatile bool udpActive;
 
         ConnectionState state;
+        PingState ping_state;
 
         udp::socket udpSocket;
         ip::udp::endpoint udpReceiverEndpoint;
@@ -84,6 +111,7 @@ namespace mumlib {
         CryptState cryptState;
 
         ssl::context sslContext;
+        SslContextHelper sslContextHelper;
         ssl::stream<tcp::socket> sslSocket;
         uint8_t *sslIncomingBuffer;
 

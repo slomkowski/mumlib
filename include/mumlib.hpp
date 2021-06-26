@@ -1,16 +1,22 @@
 #pragma once
 
 #include "mumlib/Callback.hpp"
+#include "mumlib/enums.hpp"
+
+#ifdef __MSYS__
+#define __MSABI_LONG(x) x
+#endif
 
 #include <boost/asio.hpp>
 #include <boost/noncopyable.hpp>
 
 #include <string>
-#include <mumlib/enums.hpp>
 
 namespace mumlib {
 
-    constexpr int DEFAULT_OPUS_ENCODER_BITRATE = 16000;
+    constexpr int DEFAULT_OPUS_ENCODER_BITRATE = 8000;
+    constexpr int DEFAULT_OPUS_SAMPLE_RATE = 16000;
+    constexpr int DEFAULT_OPUS_NUM_CHANNELS = 1;
 
     using namespace std;
     using namespace boost::asio;
@@ -22,7 +28,22 @@ namespace mumlib {
 
     struct MumlibConfiguration {
         int opusEncoderBitrate = DEFAULT_OPUS_ENCODER_BITRATE;
+        int opusSampleRate = DEFAULT_OPUS_SAMPLE_RATE;
+        int opusChannels = DEFAULT_OPUS_NUM_CHANNELS;
+        std::string cert_file = "";
+        std::string privkey_file = "";
         // additional fields will be added in the future
+    };
+
+    struct MumbleUser {
+        int32_t sessionId;
+        string name;
+    };
+
+    struct MumbleChannel {
+        int32_t channelId;
+        string name;
+        string description;
     };
 
     struct _Mumlib_Private;
@@ -30,7 +51,7 @@ namespace mumlib {
 
     class Mumlib : boost::noncopyable {
     public:
-        Mumlib(Callback &callback);
+        explicit Mumlib(Callback &callback);
 
         Mumlib(Callback &callback, io_service &ioService);
 
@@ -48,13 +69,38 @@ namespace mumlib {
 
         ConnectionState getConnectionState();
 
+        int getChannelId();
+
+        vector<MumbleUser> getListAllUser();
+
+        vector<MumbleChannel> getListAllChannel();
+
         void sendAudioData(int16_t *pcmData, int pcmLength);
+
+        void sendAudioDataTarget(int targetId, int16_t *pcmData, int pcmLength);
 
         void sendTextMessage(std::string message);
 
         void joinChannel(int channelId);
 
+        void joinChannel(std::string channelName);
+
+        void sendVoiceTarget(int targetId, mumlib::VoiceTargetType type, int sessionId);
+
+        void sendVoiceTarget(int targetId, mumlib::VoiceTargetType type, std::string name, int &error);
+
+        void sendUserState(mumlib::UserState state, bool val);
+
+        void sendUserState(mumlib::UserState state, std::string value);
+
+        bool isSessionIdValid(int sessionId);
     private:
         _Mumlib_Private *impl;
+
+        int getChannelIdBy(std::string channelName);
+
+        int getUserIdBy(std::string userName);
+
+        bool isChannelIdValid(int channelId);
     };
 }

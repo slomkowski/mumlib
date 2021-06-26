@@ -32,3 +32,18 @@ build/
 # IntelliJ
 *.iml
 .idea/
+
+
+# QtCreator
+*.user
+
+debug
+release
+*.gch
+*.layout
+*.depend
+*cscope_file_list
+bin
+Mumble.pb.cc
+Mumble.pb.h
+

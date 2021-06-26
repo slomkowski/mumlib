@@ -2,41 +2,99 @@
 
 #include <boost/format.hpp>
 
-static boost::posix_time::seconds RESET_SEQUENCE_NUMBER_INTERVAL(5);
+static boost::posix_time::seconds RESET_SEQUENCE_NUMBER_INTERVAL(2);
 
-mumlib::Audio::Audio(int opusEncoderBitrate)
-        : logger(log4cpp::Category::getInstance("mumlib.Audio")),
-          opusDecoder(nullptr),
-          opusEncoder(nullptr),
-          outgoingSequenceNumber(0) {
+namespace {
 
+OpusDecoder* CreateOpusDecoder(int sampleRate, int channels)
+{
     int error;
+    OpusDecoder* decoder = nullptr;
 
-    opusDecoder = opus_decoder_create(SAMPLE_RATE, 1, &error);
+    decoder = opus_decoder_create(sampleRate, channels, &error);
     if (error != OPUS_OK) {
-        throw AudioException((boost::format("failed to initialize OPUS decoder: %s") % opus_strerror(error)).str());
+        throw mumlib::AudioException((boost::format("failed to initialize OPUS decoder: %s") % opus_strerror(error)).str());
     }
 
-    opusEncoder = opus_encoder_create(SAMPLE_RATE, 1, OPUS_APPLICATION_VOIP, &error);
+    return decoder;
+}
+
+} // anonymous namespace
+
+mumlib::Audio::Audio(int sampleRate, int bitrate, int channels)
+        : logger(log4cpp::Category::getInstance("mumlib.Audio")),
+          opusEncoder(nullptr),
+          outgoingSequenceNumber(0),
+          iSampleRate(sampleRate),
+          iChannels(channels) {
+
+    int error, ret;
+    iFrameSize = sampleRate / 1000 * 10;
+    iAudioBufferSize = iFrameSize;
+    iAudioBufferSize *= 12;
+
+    opusEncoder = opus_encoder_create(sampleRate, channels, OPUS_APPLICATION_VOIP, &error);
     if (error != OPUS_OK) {
         throw AudioException((boost::format("failed to initialize OPUS encoder: %s") % opus_strerror(error)).str());
     }
 
-    opus_encoder_ctl(opusEncoder, OPUS_SET_VBR(0));
+    ret = opus_encoder_ctl(opusEncoder, OPUS_SET_BITRATE(bitrate));
+    if (ret != OPUS_OK) {
+        throw AudioException((boost::format("failed to initialize transmission bitrate to %d B/s: %s")
+                            % bitrate % opus_strerror(ret)).str());
+    }
+    ret = opus_encoder_ctl(opusEncoder, OPUS_SET_VBR(0));
+    if (ret != OPUS_OK) {
+        throw AudioException((boost::format("failed to initialize variable bitrate: %s")
+                            % opus_strerror(ret)).str());
+    }
+    ret = opus_encoder_ctl(opusEncoder, OPUS_SET_VBR_CONSTRAINT(0));
+    if (ret != OPUS_OK) {
+        throw AudioException((boost::format("failed to initialize variable bitrate constraint: %s")
+                            % opus_strerror(ret)).str());
+    }
+    ret = opus_encoder_ctl(opusEncoder, OPUS_SET_BANDWIDTH(OPUS_BANDWIDTH_NARROWBAND));
+    if (ret != OPUS_OK) {
+        throw AudioException((boost::format("failed to initialize bandwidth narrow: %s")
+                            % opus_strerror(ret)).str());
+    }
+    ret = opus_encoder_ctl(opusEncoder, OPUS_SET_MAX_BANDWIDTH(OPUS_BANDWIDTH_NARROWBAND));
+    if (ret != OPUS_OK) {
+        throw AudioException((boost::format("failed to initialize maximum bandwidth narrow: %s")
+                            % opus_strerror(ret)).str());
+    }
 
-    setOpusEncoderBitrate(opusEncoderBitrate);
+    opus_encoder_ctl(opusEncoder, OPUS_SET_SIGNAL(OPUS_SIGNAL_VOICE));
 
     resetEncoder();
+
+    jbBuffer = jitter_buffer_init(iFrameSize);
+    int margin = 10 * iFrameSize;
+    jitter_buffer_ctl(jbBuffer, JITTER_BUFFER_SET_MARGIN, &margin);
+
+    fFadeIn = new float[iFrameSize];
+    fFadeOut = new float[iFrameSize];
+
+    // Sine function to represent fade in/out. Period is FRAME_SIZE.
+    float mul = static_cast<float>(M_PI / 2.0 * static_cast<double>(iFrameSize));
+    for(unsigned int i = 0; i < iFrameSize; i++) {
+        fFadeIn[i] = fFadeOut[iFrameSize - 1 - 1] = sinf(static_cast<float>(i) * mul);
+    }
 }
 
 mumlib::Audio::~Audio() {
-    if (opusDecoder) {
-        opus_decoder_destroy(opusDecoder);
+    for (const auto decoder : opusDecoders) {
+        opus_decoder_destroy(decoder.second);
     }
 
     if (opusEncoder) {
         opus_encoder_destroy(opusEncoder);
     }
+
+    jitter_buffer_destroy(jbBuffer);
+
+    delete[] fFadeIn;
+    delete[] fFadeOut;
 }
 
 void mumlib::Audio::setOpusEncoderBitrate(int bitrate) {
@@ -56,8 +114,117 @@ int mumlib::Audio::getOpusEncoderBitrate() {
     return bitrate;
 }
 
+void mumlib::Audio::addFrameToBuffer(uint8_t *inputBuffer, int inputLength, int sequence) {
+    int dataPointer = 0;
+    VarInt varInt(inputBuffer);
+    int opusDataLength = varInt.getValue();
+    dataPointer += varInt.getEncoded().size();
+    bool lastPacket = (opusDataLength & 0x2000) != 0;
+    opusDataLength &= 0x1fff;
+
+    auto *packet = reinterpret_cast<const unsigned char *>(&inputBuffer[dataPointer]);
+    int frame = opus_packet_get_nb_frames(packet, opusDataLength);
+    int samples = frame * opus_packet_get_samples_per_frame(packet, iSampleRate);
+    int channel = opus_packet_get_nb_channels(packet);
+
+    if(not sequence) {
+        resetJitterBuffer();
+    }
+
+    logger.info("Opus packet, frame: %d, samples: %d, channel: %d", frame, samples, channel);
+
+    JitterBufferPacket jbPacket;
+    jbPacket.data = reinterpret_cast<char *>(&inputBuffer[dataPointer]);
+    jbPacket.len = opusDataLength;
+    jbPacket.span = samples;
+    jbPacket.timestamp = iFrameSize * sequence;
+    jbPacket.user_data = lastPacket;
+
+    jitter_buffer_put(jbBuffer, &jbPacket);
+}
+
+std::pair<int, bool> mumlib::Audio::decodeOpusPayload(int sessionId, int16_t *pcmBuffer, int pcmBufferSize) {
+    int avail = 0;
+    spx_uint32_t remaining = 0;
+    jitter_buffer_ctl(jbBuffer, JITTER_BUFFER_GET_AVAILABLE_COUNT, &avail);
+    jitter_buffer_remaining_span(jbBuffer, remaining);
+    int timestamp = jitter_buffer_get_pointer_timestamp(jbBuffer);
+
+    char data[4096];
+    JitterBufferPacket jbPacket;
+    jbPacket.data = data;
+    jbPacket.len = 4096;
+
+    spx_int32_t startofs = 0;
+    int opusDataLength;
+    int outputSize;
+    spx_uint32_t lastPacket;
+
+    typedef std::numeric_limits<int16_t> rlimit;
+    float pcmbuf[pcmBufferSize];
+
+    if(jitter_buffer_get(jbBuffer, &jbPacket, iFrameSize, &startofs) == JITTER_BUFFER_OK) {
+        opusDataLength = jbPacket.len;
+        lastPacket = jbPacket.user_data;
+    } else {
+        jitter_buffer_update_delay(jbBuffer, &jbPacket, NULL);
+    }
+    OpusDecoder* &opusDecoder = opusDecoders[sessionId];
+    if (!opusDecoder) {
+        opusDecoder = CreateOpusDecoder(iSampleRate, iChannels);
+    }
+
+    if(opusDataLength) {
+        outputSize = opus_decode_float(opusDecoder,
+                                    reinterpret_cast<const unsigned char *>(jbPacket.data),
+                                    jbPacket.len,
+                                    pcmbuf,
+                                    pcmBufferSize, 0);
+    } else {
+        outputSize = opus_decode_float(opusDecoder,
+                                    NULL, 0, pcmbuf, pcmBufferSize, 0);
+    }
+
+    if(outputSize < 0) {
+        outputSize = iFrameSize;
+        memset(pcmbuf, 0, iFrameSize * sizeof(float));
+    }
+
+    if(lastPacket) {
+        for(unsigned int i = 0; i < iFrameSize; i++)
+            pcmbuf[i] *= fFadeOut[i];
+    }
+
+    for (int i = 0; i < pcmBufferSize; i++) {
+        pcmBuffer[i] = pcmbuf[i] * rlimit::max();
+    }
+
+    for (int i = outputSize / iFrameSize; i > 0; --i) {
+        jitter_buffer_tick(jbBuffer);
+    }
+
+    logger.debug("%d B of Opus data decoded to %d PCM samples, last packet: %d.",
+                 opusDataLength, outputSize, lastPacket);
+
+    return std::make_pair(outputSize, lastPacket);
+}
+
+void mumlib::Audio::mixAudio(uint8_t *dest, uint8_t *src, int bufferOffset, int inputLength) {
+    for(int i = 0; i < inputLength; i++) {
+        float mix = 0;
+
+        // Clip to [-1,1]
+        if(mix > 1)
+            mix = 1;
+        else if(mix < -1)
+            mix = -1;
+        dest[i + bufferOffset] = mix;
+    }
+}
+
 std::pair<int, bool>  mumlib::Audio::decodeOpusPayload(uint8_t *inputBuffer,
                                                        int inputLength,
+                                                       int sessionId,
                                                        int16_t *pcmBuffer,
                                                        int pcmBufferSize) {
     int64_t opusDataLength;
@@ -75,8 +242,22 @@ std::pair<int, bool>  mumlib::Audio::decodeOpusPayload(uint8_t *inputBuffer,
                               % inputLength % dataPointer % opusDataLength).str());
     }
 
+    // Issue #3 (Users speaking simultaneously)
+    // https://mf4.xiph.org/jenkins/view/opus/job/opus/ws/doc/html/group__opus__decoder.html
+    // Opus is a stateful codec with overlapping blocks and as a result Opus packets are not coded independently of each other.
+    // Packets must be passed into the decoder serially and in the correct order for a correct decode.
+    // Lost packets can be replaced with loss concealment by calling the decoder with a null pointer and zero length for the missing packet.
+    // A single codec state may only be accessed from a single thread at a time and any required locking must be performed by the caller.
+    // Separate streams must be decoded with separate decoder states and can be decoded in parallel unless the library was compiled with NONTHREADSAFE_PSEUDOSTACK defined.
+    auto *packet = reinterpret_cast<const unsigned char *>(&inputBuffer[dataPointer]);
+    int frame = opus_packet_get_nb_frames(packet, opusDataLength);
+    int samples = frame * opus_packet_get_samples_per_frame(packet, iSampleRate);
+    OpusDecoder* &opusDecoder = opusDecoders[sessionId];
+    if (!opusDecoder) {
+        opusDecoder = CreateOpusDecoder(iSampleRate, iChannels);
+    }
     int outputSize = opus_decode(opusDecoder,
-                                 reinterpret_cast<const unsigned char *>(&inputBuffer[dataPointer]),
+                                 packet,
                                  opusDataLength,
                                  pcmBuffer,
                                  pcmBufferSize,
@@ -102,13 +283,13 @@ int mumlib::Audio::encodeAudioPacket(int target, int16_t *inputPcmBuffer, int in
             system_clock::now() - lastEncodedAudioPacketTimestamp).count();
 
     if (lastAudioPacketSentInterval > RESET_SEQUENCE_NUMBER_INTERVAL.total_milliseconds() + 1000) {
-        logger.debug("Last audio packet was sent %d ms ago, resetting encoder.", lastAudioPacketSentInterval);
+        logger.notice("Last audio packet was sent %d ms ago, resetting encoder.", lastAudioPacketSentInterval);
         resetEncoder();
     }
 
     std::vector<uint8_t> header;
 
-    header.push_back(0x80 | target);
+    header.push_back(static_cast<unsigned char &&>(0x80 | target));
 
     auto sequenceNumberEnc = VarInt(outgoingSequenceNumber).getEncoded();
     header.insert(header.end(), sequenceNumberEnc.begin(), sequenceNumberEnc.end());
@@ -130,15 +311,15 @@ int mumlib::Audio::encodeAudioPacket(int target, int16_t *inputPcmBuffer, int in
     header.insert(header.end(), outputSizeEnc.begin(), outputSizeEnc.end());
 
     memcpy(outputBuffer, &header[0], header.size());
-    memcpy(outputBuffer + header.size(), tmpOpusBuffer, outputSize);
+    memcpy(outputBuffer + header.size(), tmpOpusBuffer, (size_t) outputSize);
 
-    int incrementNumber = 100 * inputLength / SAMPLE_RATE;
+    int incrementNumber = 100 * inputLength / iSampleRate;
 
     outgoingSequenceNumber += incrementNumber;
 
     lastEncodedAudioPacketTimestamp = std::chrono::system_clock::now();
 
-    return outputSize + header.size();
+    return static_cast<int>(outputSize + header.size());
 }
 
 void mumlib::Audio::resetEncoder() {
@@ -151,8 +332,13 @@ void mumlib::Audio::resetEncoder() {
     outgoingSequenceNumber = 0;
 }
 
+void mumlib::Audio::resetJitterBuffer() {
+    logger.debug("Last audio packet, resetting jitter buffer");
+    jitter_buffer_reset(jbBuffer);
+}
+
 mumlib::IncomingAudioPacket mumlib::Audio::decodeIncomingAudioPacket(uint8_t *inputBuffer, int inputBufferLength) {
-    mumlib::IncomingAudioPacket incomingAudioPacket;
+    mumlib::IncomingAudioPacket incomingAudioPacket{};
 
     incomingAudioPacket.type = static_cast<AudioPacketType >((inputBuffer[0] & 0xE0) >> 5);
     incomingAudioPacket.target = inputBuffer[0] & 0x1F;
@@ -174,15 +360,17 @@ mumlib::IncomingAudioPacket mumlib::Audio::decodeIncomingAudioPacket(uint8_t *in
                               dataPointer).str());
     }
 
-    logger.debug(
-            "Received %d B of audio packet, %d B header, %d B payload (target: %d, sessionID: %ld, seq num: %ld).",
+    //logger.debug(
+/*
+    printf(
+            "Received %d B of audio packet, %d B header, %d B payload (target: %d, sessionID: %ld, seq num: %ld).\n",
             inputBufferLength,
             dataPointer,
             incomingAudioPacket.audioPayloadLength,
             incomingAudioPacket.target,
             incomingAudioPacket.sessionId,
             incomingAudioPacket.sequenceNumber);
-
+*/
     return incomingAudioPacket;
 }
 

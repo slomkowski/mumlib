@@ -2,16 +2,16 @@
 
 # mumlib - simple Mumble client library
 
-Fairy simple Mumble library written in C++, using *boost::asio* asynchronous networking framework. Library supports:
+Fairly simple Mumble library written in C++, using *boost::asio* asynchronous networking framework. Library supports:
 
-* audio streaming through TCP and UDP channel
-* text messaging
+* Audio streaming through TCP and UDP channel
+* Text messaging
 
 Todo:
 
-* channel support
-* user information
-* remaining server messages (ACL, user stats etc)
+* Channel support
+* User information
+* Remaining server messages (ACL, user stats etc)
 
 ## Dependencies
 
@@ -21,6 +21,12 @@ Todo:
 * Opus library
 * Google Protobuf: libraries and compiler
 * CMake
+* Speex DSP library
+
+Install those dependencies on Debian GNU/Linux using:
+```
+apt install libboost{,-system}-dev libssl-dev liblog4cpp5-dev libopus-dev protobuf-compiler libspeexdsp-dev cmake build-essential
+```
 
 ## Build
 
@@ -36,6 +42,8 @@ make
 
 Sample usage is covered in *mumlib_example.cpp* file. Basically, you should extend *mumlib::Callback* class
 to implement your own handlers.
+
+To use a client certificate, you'll need a PEM certificate and private key without a passphrase. These are assed in the MumlibConfig struct to the Mumlib object constructor. Support for passphrase still needs to be added.
 
 ## Credits
 
